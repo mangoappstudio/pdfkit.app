@@ -4,7 +4,7 @@ A privacy-first PDF utility app that processes files entirely in your browser. N
 
 ## Stack
 
-- **Next.js 14** (App Router)
+- **Next.js 16** (App Router)
 - **TypeScript**
 - **Tailwind CSS**
 - **shadcn/ui** component library
