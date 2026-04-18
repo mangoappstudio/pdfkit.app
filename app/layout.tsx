@@ -4,15 +4,15 @@ import { Toaster } from "@/components/ui/sonner";
 
 export const metadata: Metadata = {
   title: {
-    default: "PDFKit.app – Private PDF Tools",
+    default: "PDFKit.app – Prepare Sensitive PDFs Privately",
     template: "%s | PDFKit.app",
   },
   description:
-    "Merge, split, reorder, and prepare sensitive PDFs without uploading them. All processing happens locally in your browser.",
-  keywords: ["PDF", "merge PDF", "split PDF", "reorder PDF", "privacy", "local processing"],
+    "Redact, extract, remove pages, watermark, and merge sensitive PDFs locally in your browser before sharing or uploading them anywhere.",
+  keywords: ["PDF", "redact PDF", "extract pages", "remove pages", "watermark PDF", "merge PDF", "split PDF", "local processing", "private"],
   openGraph: {
-    title: "PDFKit.app – Private PDF Tools",
-    description: "Privacy-first PDF tools that run entirely in your browser. No uploads, no accounts.",
+    title: "PDFKit.app – Prepare Sensitive PDFs Privately",
+    description: "Prepare sensitive PDFs before sharing. All processing happens locally in your browser. No uploads, no accounts.",
     type: "website",
   },
 };
