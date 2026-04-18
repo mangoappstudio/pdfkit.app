@@ -129,7 +129,7 @@ export function AddWatermarkClient() {
             <span
               style={{
                 opacity,
-                transform: `rotate(-${rotation}deg)`,
+                transform: `rotate(${rotation}deg)`,
                 fontSize: `${Math.min(fontSize, 36)}px`,
                 color: "#666",
                 fontWeight: "bold",
