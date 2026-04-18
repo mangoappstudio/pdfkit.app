@@ -191,3 +191,32 @@ export async function getPDFPageCount(file: File): Promise<number> {
   const pdf = await PDFDocument.load(bytes);
   return pdf.getPageCount();
 }
+
+// A single redaction box: page index (0-based) and coordinates in PDF points (bottom-left origin)
+export interface RedactionBox {
+  pageIndex: number;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+// Apply filled black rectangles over the specified areas to visually redact content
+export async function redactPDF(file: File, boxes: RedactionBox[]): Promise<Uint8Array> {
+  const bytes = await file.arrayBuffer();
+  const pdfDoc = await PDFDocument.load(bytes);
+  const pages = pdfDoc.getPages();
+  for (const box of boxes) {
+    const page = pages[box.pageIndex];
+    if (!page) continue;
+    page.drawRectangle({
+      x: box.x,
+      y: box.y,
+      width: box.width,
+      height: box.height,
+      color: rgb(0, 0, 0),
+      opacity: 1,
+    });
+  }
+  return pdfDoc.save();
+}

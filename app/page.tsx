@@ -1,26 +1,68 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+import { SiteNav } from "@/components/site-nav";
 import {
+  EyeOff,
+  FileOutput,
+  MinusSquare,
+  Stamp,
   FileStack,
+  Package,
   Scissors,
   ArrowUpDown,
-  FileOutput,
   ImagePlus,
-  Stamp,
   ShieldCheck,
   Cpu,
   UserX,
+  CheckCircle2,
 } from "lucide-react";
 
-const tools = [
+const primaryTools = [
+  {
+    href: "/redact-pdf",
+    icon: EyeOff,
+    title: "Redact PDF",
+    description: "Cover sensitive text and areas before sharing. Black out what should not be seen.",
+    color: "bg-red-50 text-red-600",
+  },
+  {
+    href: "/extract-pages",
+    icon: FileOutput,
+    title: "Extract Pages",
+    description: "Select only the pages you need and export them as a new PDF.",
+    color: "bg-orange-50 text-orange-600",
+  },
+  {
+    href: "/remove-pages",
+    icon: MinusSquare,
+    title: "Remove Pages",
+    description: "Remove pages you do not want to send before sharing the document.",
+    color: "bg-yellow-50 text-yellow-600",
+  },
+  {
+    href: "/add-watermark",
+    icon: Stamp,
+    title: "Watermark PDF",
+    description: "Add a watermark before sharing so the recipient knows the document's status.",
+    color: "bg-amber-50 text-amber-600",
+  },
   {
     href: "/merge-pdf",
     icon: FileStack,
     title: "Merge PDF",
-    description: "Combine multiple PDFs into one. Reorder files before merging.",
+    description: "Combine supporting documents into one clean, shareable PDF.",
     color: "bg-blue-50 text-blue-600",
   },
+  {
+    href: "/prepare",
+    icon: Package,
+    title: "Document Packet Builder",
+    description: "Assemble, organize, and export a final PDF packet from multiple files.",
+    color: "bg-indigo-50 text-indigo-600",
+  },
+];
+
+const supportingTools = [
   {
     href: "/split-pdf",
     icon: Scissors,
@@ -32,15 +74,8 @@ const tools = [
     href: "/reorder-pages",
     icon: ArrowUpDown,
     title: "Reorder Pages",
-    description: "Drag and drop pages to reorder, rotate, or delete them.",
+    description: "Drag and drop pages to reorder or rotate them.",
     color: "bg-green-50 text-green-600",
-  },
-  {
-    href: "/extract-pages",
-    icon: FileOutput,
-    title: "Extract Pages",
-    description: "Select specific pages and export them as a new PDF.",
-    color: "bg-orange-50 text-orange-600",
   },
   {
     href: "/images-to-pdf",
@@ -49,116 +84,105 @@ const tools = [
     description: "Convert JPG, PNG, or WebP images into a single PDF.",
     color: "bg-pink-50 text-pink-600",
   },
-  {
-    href: "/add-watermark",
-    icon: Stamp,
-    title: "Add Watermark",
-    description: "Add a customizable text watermark to every page.",
-    color: "bg-amber-50 text-amber-600",
-  },
+];
+
+const prepTasks = [
+  "Remove pages you do not want to send",
+  "Extract only the pages that are needed",
+  "Redact sensitive information before uploading",
+  "Add a watermark before sharing",
+  "Merge supporting documents into one clean PDF",
 ];
 
 const trustPoints = [
   {
     icon: ShieldCheck,
-    title: "No file uploads",
-    description: "Your files never leave your device for supported tools.",
+    title: "100% browser-based",
+    description: "PDF operations run entirely in your browser using standard web APIs.",
   },
   {
     icon: UserX,
-    title: "No account required",
-    description: "Open a tool and start working immediately.",
+    title: "No uploads",
+    description: "Your files never leave your device during processing.",
   },
   {
     icon: Cpu,
-    title: "Processed locally",
-    description: "All PDF operations run entirely in your browser.",
-  },
-];
-
-const useCases = [
-  {
-    title: "Visa document bundle",
-    description: "Merge passport scans, bank statements, and invitation letters into a single organized PDF.",
-  },
-  {
-    title: "Tax document prep",
-    description: "Reorder and extract specific pages from tax forms before filing.",
-  },
-  {
-    title: "Rental application",
-    description: "Combine pay stubs, ID, and references into one clean packet.",
-  },
-  {
-    title: "Secure PDF cleanup",
-    description: "Remove pages or add a watermark to sensitive documents without uploading them.",
+    title: "No account required",
+    description: "Open any tool and start working immediately.",
   },
 ];
 
 export default function HomePage() {
   return (
     <div className="min-h-screen bg-white">
-      {/* Nav */}
-      <header className="border-b border-gray-100 bg-white/80 backdrop-blur-sm sticky top-0 z-50">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between">
-          <Link href="/" className="font-semibold text-gray-900 text-lg">
-            PDFKit<span className="text-blue-600">.app</span>
-          </Link>
-          <nav className="hidden sm:flex items-center gap-6 text-sm text-gray-600">
-            <Link href="/merge-pdf" className="hover:text-gray-900 transition-colors">Tools</Link>
-            <Link href="/about" className="hover:text-gray-900 transition-colors">About</Link>
-            <Link href="/privacy" className="hover:text-gray-900 transition-colors">Privacy</Link>
-          </nav>
-        </div>
-      </header>
+      <SiteNav />
 
       {/* Hero */}
       <section className="max-w-6xl mx-auto px-4 sm:px-6 pt-20 pb-16 text-center">
-        <Badge variant="secondary" className="mb-6 text-xs font-medium">
-          100% browser-based · No uploads · No accounts
-        </Badge>
+        <div className="inline-flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-full px-4 py-1.5 mb-8 text-xs text-gray-600 font-medium">
+          <ShieldCheck className="w-3.5 h-3.5 text-green-500" />
+          100% browser-based · No uploads · No account required
+        </div>
         <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-gray-900 leading-tight mb-6">
-          Private PDF tools that run<br className="hidden sm:block" /> in your browser
+          Prepare sensitive PDFs privately,<br className="hidden sm:block" /> right in your browser
         </h1>
         <p className="text-lg sm:text-xl text-gray-500 max-w-2xl mx-auto mb-10">
-          Merge, split, reorder, and prepare sensitive PDFs without uploading them. Your documents stay on your device.
+          Redact, extract, reorder, watermark, and package documents locally before sharing or uploading them anywhere.
         </p>
         <div className="flex flex-col sm:flex-row gap-3 justify-center">
           <Button size="lg" asChild>
-            <Link href="#tools">Explore tools</Link>
+            <Link href="/prepare">Start preparing documents</Link>
           </Button>
           <Button size="lg" variant="outline" asChild>
-            <Link href="/merge-pdf">Start with Merge PDF</Link>
+            <Link href="#tools">See tools</Link>
           </Button>
         </div>
       </section>
 
-      {/* Trust strip */}
-      <section className="bg-gray-50 border-y border-gray-100 py-10">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 grid grid-cols-1 sm:grid-cols-3 gap-8">
-          {trustPoints.map((point) => {
-            const Icon = point.icon;
-            return (
-              <div key={point.title} className="flex flex-col items-center text-center gap-2">
-                <Icon className="w-6 h-6 text-blue-600" />
-                <h3 className="font-semibold text-gray-900 text-sm">{point.title}</h3>
-                <p className="text-gray-500 text-sm">{point.description}</p>
-              </div>
-            );
-          })}
+      {/* Prepare before sharing */}
+      <section className="bg-gray-50 border-y border-gray-100 py-16">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 grid grid-cols-1 md:grid-cols-2 gap-10 items-center">
+          <div>
+            <h2 className="text-2xl font-bold text-gray-900 mb-4">Prepare documents before sharing</h2>
+            <p className="text-gray-500 mb-6">
+              Before you upload or share sensitive files, make sure they contain only what you intend to send.
+            </p>
+            <ul className="space-y-3">
+              {prepTasks.map((task) => (
+                <li key={task} className="flex items-start gap-3">
+                  <CheckCircle2 className="w-4 h-4 text-green-500 mt-0.5 shrink-0" />
+                  <span className="text-sm text-gray-700">{task}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+          <div className="grid grid-cols-1 gap-4">
+            <div className="bg-white border border-gray-200 rounded-xl p-5">
+              <p className="text-sm font-medium text-gray-900 mb-1">Sharing a bank statement?</p>
+              <p className="text-sm text-gray-500">Redact your account number, then extract only the pages needed.</p>
+            </div>
+            <div className="bg-white border border-gray-200 rounded-xl p-5">
+              <p className="text-sm font-medium text-gray-900 mb-1">Sending a contract?</p>
+              <p className="text-sm text-gray-500">Add a DRAFT watermark and remove any internal pages before sharing.</p>
+            </div>
+            <div className="bg-white border border-gray-200 rounded-xl p-5">
+              <p className="text-sm font-medium text-gray-900 mb-1">Submitting supporting documents?</p>
+              <p className="text-sm text-gray-500">Merge everything into one clean PDF packet, organized exactly how you want it.</p>
+            </div>
+          </div>
         </div>
       </section>
 
-      {/* Tool grid */}
+      {/* Primary tools */}
       <section id="tools" className="max-w-6xl mx-auto px-4 sm:px-6 py-20">
         <div className="text-center mb-12">
-          <h2 className="text-3xl font-bold text-gray-900 mb-3">PDF tools, built for sensitive documents</h2>
+          <h2 className="text-3xl font-bold text-gray-900 mb-3">Tools for sensitive document prep</h2>
           <p className="text-gray-500 max-w-xl mx-auto">
-            Each tool runs entirely in your browser. No server processing, no storage, no tracking.
+            Each tool runs entirely in your browser. Files stay on your device during processing.
           </p>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-          {tools.map((tool) => {
+          {primaryTools.map((tool) => {
             const Icon = tool.icon;
             return (
               <Link
@@ -179,55 +203,87 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Use cases */}
-      <section className="bg-gray-50 border-y border-gray-100 py-16">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6">
-          <div className="text-center mb-10">
-            <h2 className="text-2xl font-bold text-gray-900 mb-3">Built for real-world document workflows</h2>
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-            {useCases.map((uc) => (
-              <div key={uc.title} className="bg-white rounded-xl border border-gray-200 p-5">
-                <h3 className="font-semibold text-gray-900 mb-2 text-sm">{uc.title}</h3>
-                <p className="text-gray-500 text-sm">{uc.description}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Privacy section */}
-      <section className="max-w-4xl mx-auto px-4 sm:px-6 py-20 text-center">
-        <ShieldCheck className="w-10 h-10 text-blue-600 mx-auto mb-5" />
-        <h2 className="text-2xl font-bold text-gray-900 mb-4">Your files stay on your device</h2>
-        <p className="text-gray-500 max-w-xl mx-auto mb-6">
-          For all tools in the current version, PDF processing happens entirely in your browser using standard web APIs.
-          Files are not sent to our servers. No cloud storage is used. No document contents are logged.
-        </p>
-        <p className="text-gray-400 text-sm max-w-lg mx-auto">
-          This is the core promise of PDFKit.app for its MVP tools. If cloud features are ever introduced in the future,
-          they will be clearly opt-in and separate from these local tools.
-        </p>
-        <div className="mt-8">
-          <Button variant="outline" asChild>
-            <Link href="/privacy">Read our privacy approach</Link>
+      {/* Packet builder callout */}
+      <section className="bg-indigo-50 border-y border-indigo-100 py-16">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 text-center">
+          <Package className="w-10 h-10 text-indigo-600 mx-auto mb-5" />
+          <h2 className="text-2xl font-bold text-gray-900 mb-4">Document Packet Builder</h2>
+          <p className="text-gray-600 max-w-xl mx-auto mb-6">
+            Add multiple files, organize them in the right order, add an optional watermark or cover title, then export one final clean PDF — all locally in your browser.
+          </p>
+          <Button asChild>
+            <Link href="/prepare">Build a document packet</Link>
           </Button>
         </div>
       </section>
 
+      {/* Supporting tools */}
+      <section className="max-w-6xl mx-auto px-4 sm:px-6 py-16">
+        <h2 className="text-xl font-bold text-gray-900 mb-6">Supporting tools</h2>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
+          {supportingTools.map((tool) => {
+            const Icon = tool.icon;
+            return (
+              <Link
+                key={tool.href}
+                href={tool.href}
+                className="group rounded-xl border border-gray-200 p-5 hover:border-blue-200 hover:shadow-sm transition-all bg-white"
+              >
+                <div className={`w-9 h-9 rounded-lg flex items-center justify-center mb-3 ${tool.color}`}>
+                  <Icon className="w-4 h-4" />
+                </div>
+                <h3 className="font-semibold text-gray-900 mb-1 text-sm group-hover:text-blue-600 transition-colors">
+                  {tool.title}
+                </h3>
+                <p className="text-xs text-gray-500">{tool.description}</p>
+              </Link>
+            );
+          })}
+        </div>
+      </section>
+
+      {/* Trust strip */}
+      <section className="bg-gray-50 border-y border-gray-100 py-12">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6">
+          <h2 className="text-xl font-bold text-gray-900 text-center mb-8">How it works</h2>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-8">
+            {trustPoints.map((point) => {
+              const Icon = point.icon;
+              return (
+                <div key={point.title} className="flex flex-col items-center text-center gap-2">
+                  <Icon className="w-6 h-6 text-blue-600" />
+                  <h3 className="font-semibold text-gray-900 text-sm">{point.title}</h3>
+                  <p className="text-gray-500 text-sm">{point.description}</p>
+                </div>
+              );
+            })}
+          </div>
+          <div className="mt-8 text-center">
+            <p className="text-sm text-gray-400 max-w-lg mx-auto">
+              Sensitive files stay on your device during processing. No document contents are sent to a server for any of the current tools. No cloud storage. No tracking.
+            </p>
+            <Link href="/privacy" className="inline-block mt-4 text-sm text-blue-600 hover:text-blue-800 transition-colors">
+              Read how privacy works →
+            </Link>
+          </div>
+        </div>
+      </section>
+
       {/* Footer */}
-      <footer className="border-t border-gray-100 bg-gray-50">
+      <footer className="border-t border-gray-100 bg-white">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8 flex flex-col sm:flex-row items-center justify-between gap-4">
           <span className="text-sm text-gray-500">
-            PDFKit<span className="text-blue-600">.app</span> · Privacy-first PDF tools
+            PDFKit<span className="text-blue-600">.app</span> · Prepare sensitive PDFs before sharing
           </span>
           <nav className="flex items-center gap-5 text-sm text-gray-500">
+            <Link href="/prepare" className="hover:text-gray-900 transition-colors">Prepare</Link>
+            <Link href="/#tools" className="hover:text-gray-900 transition-colors">Tools</Link>
             <Link href="/privacy" className="hover:text-gray-900 transition-colors">Privacy</Link>
             <Link href="/about" className="hover:text-gray-900 transition-colors">About</Link>
-            <Link href="/#tools" className="hover:text-gray-900 transition-colors">Tools</Link>
           </nav>
         </div>
       </footer>
     </div>
   );
 }
+

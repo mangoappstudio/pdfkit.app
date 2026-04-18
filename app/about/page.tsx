@@ -1,22 +1,17 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
+import { SiteNav } from "@/components/site-nav";
 
 export const metadata: Metadata = {
   title: "About",
-  description: "About PDFKit.app — a privacy-first PDF utility.",
+  description: "About PDFKit.app — a private PDF preparation tool.",
 };
 
 export default function AboutPage() {
   return (
     <div className="min-h-screen bg-white">
-      <header className="border-b border-gray-100">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 h-14 flex items-center">
-          <Link href="/" className="font-semibold text-gray-900 text-lg">
-            PDFKit<span className="text-blue-600">.app</span>
-          </Link>
-        </div>
-      </header>
+      <SiteNav />
 
       <main className="max-w-3xl mx-auto px-4 sm:px-6 py-12">
         <Link
@@ -31,27 +26,23 @@ export default function AboutPage() {
 
         <div className="space-y-6 text-gray-600 leading-relaxed">
           <p>
-            PDFKit.app is a privacy-first PDF utility app designed for sensitive document workflows.
-            It was built for people who need to handle visa files, tax documents, rental applications,
-            legal paperwork, and other sensitive PDFs — without uploading them to unknown servers.
+            PDFKit.app is a private document preparation tool for sensitive PDFs. It is built for people who need to prepare documents — redacting, extracting, reordering, watermarking, or assembling files — before sharing or uploading them anywhere.
           </p>
 
           <p>
-            The core principle is simple: your files stay on your device. All supported tools process
-            documents locally in your browser using standard web technologies. Nothing is uploaded.
-            Nothing is stored. No account is needed.
+            The core principle is simple: your files stay on your device. All supported tools process documents locally in your browser using standard web technologies. Nothing is uploaded. Nothing is stored. No account is needed.
           </p>
 
           <p>
-            PDFKit.app is intentionally minimal. We build focused tools that do one thing well, rather than
-            a bloated platform with features you don&apos;t need. The tools available today cover the most common
-            PDF tasks: merging, splitting, reordering, extracting pages, converting images, and adding watermarks.
+            PDFKit.app is intentionally focused. Rather than being a generic PDF toolbox, it is organized around the task of preparing sensitive PDFs before they are shared — with bank institutions, employers, landlords, attorneys, or anyone else who needs to receive your documents.
           </p>
 
           <p>
-            This is an MVP. If you have feedback or ideas, we&apos;d love to hear them. The architecture is designed
-            to be extensible — while the core tools will always remain local, optional cloud capabilities may
-            be explored in the future, with full transparency and opt-in consent.
+            The tools available today cover the most important preparation tasks: redacting sensitive information, extracting only the pages you need, removing pages that should not be shared, adding watermarks, and merging documents into one clean packet. All of this happens locally in your browser.
+          </p>
+
+          <p>
+            This is an early version. If you have feedback or ideas, we would love to hear them. The architecture is designed to be extensible — while the core tools will always remain local, optional cloud capabilities may be explored in the future with full transparency and explicit opt-in.
           </p>
         </div>
 
@@ -64,3 +55,4 @@ export default function AboutPage() {
     </div>
   );
 }
+

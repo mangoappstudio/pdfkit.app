@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { ShieldCheck, ArrowLeft } from "lucide-react";
+import { SiteNav } from "@/components/site-nav";
 
 export const metadata: Metadata = {
   title: "Privacy",
@@ -10,13 +11,7 @@ export const metadata: Metadata = {
 export default function PrivacyPage() {
   return (
     <div className="min-h-screen bg-white">
-      <header className="border-b border-gray-100">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 h-14 flex items-center">
-          <Link href="/" className="font-semibold text-gray-900 text-lg">
-            PDFKit<span className="text-blue-600">.app</span>
-          </Link>
-        </div>
-      </header>
+      <SiteNav />
 
       <main className="max-w-3xl mx-auto px-4 sm:px-6 py-12">
         <Link
@@ -34,12 +29,12 @@ export default function PrivacyPage() {
 
         <div className="prose prose-gray max-w-none space-y-8">
           <section>
-            <h2 className="text-xl font-semibold text-gray-900 mb-3">Local-only file processing</h2>
+            <h2 className="text-xl font-semibold text-gray-900 mb-3">Files are processed locally in your browser</h2>
             <p className="text-gray-600 leading-relaxed">
               All PDF tools in the current version of PDFKit.app process your files entirely within your browser.
               Your documents are not uploaded to our servers, not stored in cloud storage, and not sent to any
-              third-party service. The PDF operations run using standard browser APIs and JavaScript libraries
-              (pdf-lib) that execute locally on your device.
+              third-party service. The PDF operations run using standard browser APIs and the pdf-lib JavaScript
+              library, which execute locally on your device. Sensitive files stay on your device during processing.
             </p>
           </section>
 
@@ -48,6 +43,15 @@ export default function PrivacyPage() {
             <p className="text-gray-600 leading-relaxed">
               PDFKit.app does not require you to create an account, log in, or provide any personal information.
               You can open any tool and start working immediately.
+            </p>
+          </section>
+
+          <section>
+            <h2 className="text-xl font-semibold text-gray-900 mb-3">We do not upload document contents</h2>
+            <p className="text-gray-600 leading-relaxed">
+              For all tools currently available in PDFKit.app, document contents are never sent to a server.
+              The files you load, the pages you extract, the redactions you apply, the watermarks you add —
+              all of this happens locally and the results are downloaded directly to your device.
             </p>
           </section>
 
@@ -63,9 +67,9 @@ export default function PrivacyPage() {
           <section>
             <h2 className="text-xl font-semibold text-gray-900 mb-3">Future cloud features</h2>
             <p className="text-gray-600 leading-relaxed">
-              If optional cloud-based features are introduced in the future (such as cloud storage or server-side
-              processing), they will be clearly labeled, clearly opt-in, and entirely separate from the local tools
-              described here. The local tools will always remain local.
+              If optional cloud-based features are introduced in the future, they will be clearly labeled,
+              clearly opt-in, and entirely separate from the local tools described here. The local tools
+              will always remain local.
             </p>
           </section>
 
@@ -76,9 +80,15 @@ export default function PrivacyPage() {
               Very large PDFs may be slow to process or may hit memory limits in older or low-memory browsers.
               We recommend using a modern browser (Chrome, Firefox, Safari, or Edge) for best results.
             </p>
+            <p className="text-gray-600 leading-relaxed mt-3">
+              Visual redaction (covering areas with black boxes) removes the visible content but does not
+              rewrite the underlying PDF content stream. For documents requiring certified redaction,
+              consult a professional tool designed for that purpose.
+            </p>
           </section>
         </div>
       </main>
     </div>
   );
 }
+

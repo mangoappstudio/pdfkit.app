@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { ArrowLeft, ShieldCheck } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
+import { SiteNav } from "@/components/site-nav";
 
 interface ToolLayoutProps {
   title: string;
@@ -11,18 +11,7 @@ interface ToolLayoutProps {
 export function ToolLayout({ title, description, children }: ToolLayoutProps) {
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="border-b border-gray-100 bg-white/80 backdrop-blur-sm sticky top-0 z-50">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between">
-          <Link href="/" className="font-semibold text-gray-900 text-lg">
-            PDFKit<span className="text-blue-600">.app</span>
-          </Link>
-          <Badge variant="secondary" className="text-xs hidden sm:flex items-center gap-1">
-            <ShieldCheck className="w-3 h-3" />
-            Processed locally
-          </Badge>
-        </div>
-      </header>
+      <SiteNav />
 
       <main className="max-w-5xl mx-auto px-4 sm:px-6 py-8">
         {/* Back link */}
