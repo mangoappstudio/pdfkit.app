@@ -1,7 +1,7 @@
 "use client";
 
-import { useRef, useState, useCallback } from "react";
-import { Download, FileText, Loader2, Scissors } from "lucide-react";
+import { useMemo, useState, useCallback } from "react";
+import { Download, FileText, Scissors } from "lucide-react";
 import JSZip from "jszip";
 import { toast } from "sonner";
 import { ToolLayout } from "@/components/tool-layout";
@@ -13,6 +13,7 @@ import { splitPDFByRanges, splitPDFIntoPages, getPDFPageCount, parsePageRanges }
 import { downloadBlob, downloadFile } from "@/lib/download";
 import { PDF_ACCEPT } from "@/lib/file-utils";
 import { usePdfThumbnails } from "@/components/use-pdf-thumbnails";
+import { PageThumbnailGrid } from "@/components/page-thumbnail-grid";
 
 type SplitMode = "ranges" | "all-pages";
 
@@ -24,7 +25,7 @@ export function SplitPDFClient() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [results, setResults] = useState<{ name: string; bytes: Uint8Array }[]>([]);
   const [showPreviews, setShowPreviews] = useState(true);
-  const rangeStartRef = useRef<number | null>(null);
+  const [rangeStart, setRangeStart] = useState<number | null>(null);
 
   const { urls: thumbUrls, isRendering: isRenderingThumbs, renderedCount: thumbsRendered, reset: resetThumbs } =
     usePdfThumbnails(file, pageCount, { width: 160, maxScale: 1, yieldEvery: 2 });
@@ -36,7 +37,7 @@ export function SplitPDFClient() {
     setFile(f);
     setResults([]);
     setRangeInput("");
-    rangeStartRef.current = null;
+    setRangeStart(null);
     try {
       const count = await getPDFPageCount(f);
       setPageCount(count);
@@ -57,19 +58,25 @@ export function SplitPDFClient() {
     });
   }
 
-  function handlePreviewClick(pageNumber: number) {
+  function handlePreviewClick(pageIndex: number) {
     if (mode !== "ranges") return;
-    const currentStart = rangeStartRef.current;
+    const pageNumber = pageIndex + 1;
+    const currentStart = rangeStart;
     if (currentStart === null) {
-      rangeStartRef.current = pageNumber;
+      setRangeStart(pageNumber);
       toast.message(`Range start set to page ${pageNumber}. Click an end page to complete.`);
       return;
     }
     const start = Math.min(currentStart, pageNumber);
     const end = Math.max(currentStart, pageNumber);
     appendToken(start === end ? `${start}` : `${start}-${end}`);
-    rangeStartRef.current = null;
+    setRangeStart(null);
   }
+
+  const rangeStartSelected = useMemo(() => {
+    if (!rangeStart) return new Set<number>();
+    return new Set<number>([rangeStart - 1]);
+  }, [rangeStart]);
 
   async function downloadAllAsZip() {
     if (results.length === 0) return;
@@ -157,7 +164,7 @@ export function SplitPDFClient() {
                 setPageCount(0);
                 setResults([]);
                 setRangeInput("");
-                rangeStartRef.current = null;
+                setRangeStart(null);
               }}
             >
               Remove
@@ -253,41 +260,15 @@ export function SplitPDFClient() {
               </button>
             </div>
 
-            <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-3">
-              {Array.from({ length: pageCount }, (_, i) => {
-                const pageNumber = i + 1;
-                return (
-                  <button
-                    key={i}
-                    onClick={() => handlePreviewClick(pageNumber)}
-                    className="group relative aspect-[3/4] rounded-lg border-2 overflow-hidden bg-white transition-all border-gray-200 hover:border-gray-300 hover:shadow-sm"
-                    aria-label={`Use page ${pageNumber} in range builder`}
-                    type="button"
-                  >
-                    {thumbUrls[i] ? (
-                      <img
-                        src={thumbUrls[i]!}
-                        alt={`Page ${pageNumber} preview`}
-                        className="w-full h-full object-contain bg-white"
-                        draggable={false}
-                      />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center bg-gray-50">
-                        {isRenderingThumbs ? (
-                          <Loader2 className="w-4 h-4 text-gray-300 animate-spin" aria-hidden="true" />
-                        ) : (
-                          <span className="text-sm font-semibold text-gray-300">{pageNumber}</span>
-                        )}
-                      </div>
-                    )}
-                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/5 transition-colors" />
-                    <span className="absolute bottom-1 left-2 text-xs text-gray-600 bg-white/80 backdrop-blur px-1.5 py-0.5 rounded">
-                      p. {pageNumber}
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
+            <PageThumbnailGrid
+              pageCount={pageCount}
+              thumbnailUrls={thumbUrls}
+              selectedPages={rangeStartSelected}
+              onPageClick={(pageIndex) => handlePreviewClick(pageIndex)}
+              variant="neutral"
+              isRenderingThumbnails={isRenderingThumbs}
+              ariaLabel={(pageIndex) => `Use page ${pageIndex + 1} in range builder`}
+            />
 
             <div className="flex items-center justify-between">
               <p className="text-xs text-gray-400">
@@ -295,7 +276,10 @@ export function SplitPDFClient() {
               </p>
               <button
                 className="text-xs text-gray-400 hover:text-gray-600 transition-colors"
-                onClick={() => { rangeStartRef.current = null; toast.message("Range start cleared."); }}
+                onClick={() => {
+                  setRangeStart(null);
+                  toast.message("Range start cleared.");
+                }}
                 type="button"
               >
                 Clear start
