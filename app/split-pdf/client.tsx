@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useCallback } from "react";
-import { Scissors, FileText } from "lucide-react";
+import { useRef, useState, useCallback } from "react";
+import { Download, FileText, Loader2, Scissors } from "lucide-react";
+import JSZip from "jszip";
 import { toast } from "sonner";
 import { ToolLayout } from "@/components/tool-layout";
 import { DropZone } from "@/components/drop-zone";
@@ -9,8 +10,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { splitPDFByRanges, splitPDFIntoPages, getPDFPageCount, parsePageRanges } from "@/lib/pdf-utils";
-import { downloadFile } from "@/lib/download";
+import { downloadBlob, downloadFile } from "@/lib/download";
 import { PDF_ACCEPT } from "@/lib/file-utils";
+import { usePdfThumbnails } from "@/components/use-pdf-thumbnails";
 
 type SplitMode = "ranges" | "all-pages";
 
@@ -21,20 +23,62 @@ export function SplitPDFClient() {
   const [rangeInput, setRangeInput] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
   const [results, setResults] = useState<{ name: string; bytes: Uint8Array }[]>([]);
+  const [showPreviews, setShowPreviews] = useState(true);
+  const rangeStartRef = useRef<number | null>(null);
+
+  const { urls: thumbUrls, isRendering: isRenderingThumbs, renderedCount: thumbsRendered, reset: resetThumbs } =
+    usePdfThumbnails(file, pageCount, { width: 160, maxScale: 1, yieldEvery: 2 });
 
   const handleDrop = useCallback(async (files: File[]) => {
     const f = files[0];
     if (!f) return;
+    resetThumbs();
     setFile(f);
     setResults([]);
+    setRangeInput("");
+    rangeStartRef.current = null;
     try {
       const count = await getPDFPageCount(f);
       setPageCount(count);
     } catch {
       toast.error("Could not read this PDF. It may be corrupted or password-protected.");
       setFile(null);
+      setPageCount(0);
     }
-  }, []);
+  }, [resetThumbs]);
+
+  function appendToken(token: string) {
+    setRangeInput((prev) => {
+      const trimmed = prev.trim();
+      if (!trimmed) return token;
+      const lastChar = trimmed[trimmed.length - 1];
+      const needsSeparator = lastChar !== ";" && lastChar !== "," && lastChar !== "-";
+      return `${trimmed}${needsSeparator ? "," : ""}${token}`;
+    });
+  }
+
+  function handlePreviewClick(pageNumber: number) {
+    if (mode !== "ranges") return;
+    const currentStart = rangeStartRef.current;
+    if (currentStart === null) {
+      rangeStartRef.current = pageNumber;
+      toast.message(`Range start set to page ${pageNumber}. Click an end page to complete.`);
+      return;
+    }
+    const start = Math.min(currentStart, pageNumber);
+    const end = Math.max(currentStart, pageNumber);
+    appendToken(start === end ? `${start}` : `${start}-${end}`);
+    rangeStartRef.current = null;
+  }
+
+  async function downloadAllAsZip() {
+    if (results.length === 0) return;
+    const zip = new JSZip();
+    results.forEach((r) => zip.file(r.name, r.bytes));
+    const blob = await zip.generateAsync({ type: "blob" });
+    const baseName = file ? file.name.replace(/\.pdf$/i, "") : "split";
+    downloadBlob(blob, `${baseName}-split.zip`);
+  }
 
   const handleSplit = async () => {
     if (!file) return;
@@ -107,7 +151,14 @@ export function SplitPDFClient() {
             </div>
             <button
               className="text-xs text-gray-400 hover:text-red-500 transition-colors shrink-0"
-              onClick={() => { setFile(null); setPageCount(0); setResults([]); }}
+              onClick={() => {
+                resetThumbs();
+                setFile(null);
+                setPageCount(0);
+                setResults([]);
+                setRangeInput("");
+                rangeStartRef.current = null;
+              }}
             >
               Remove
             </button>
@@ -159,6 +210,18 @@ export function SplitPDFClient() {
                 <p className="text-xs text-gray-400">
                   Separate multiple output parts with a semicolon ( ; ). Each part becomes a separate PDF.
                 </p>
+                <div className="flex items-center justify-between">
+                  <p className="text-xs text-gray-400">
+                    Tip: click page previews below to build ranges quickly.
+                  </p>
+                  <button
+                    className="text-xs text-gray-400 hover:text-gray-600 transition-colors"
+                    onClick={() => setRangeInput("")}
+                    type="button"
+                  >
+                    Clear input
+                  </button>
+                </div>
               </div>
             )}
 
@@ -167,6 +230,85 @@ export function SplitPDFClient() {
                 Each page will be exported as an individual PDF file ({pageCount} files total).
               </p>
             )}
+          </div>
+        )}
+
+        {file && mode === "ranges" && showPreviews && pageCount > 0 && (
+          <div className="bg-white border border-gray-200 rounded-xl p-5 space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="space-y-0.5">
+                <h2 className="text-sm font-semibold text-gray-800">Page previews</h2>
+                {isRenderingThumbs && (
+                  <p className="text-xs text-gray-400">
+                    Rendering previews… {thumbsRendered}/{pageCount}
+                  </p>
+                )}
+              </div>
+              <button
+                className="text-xs text-gray-400 hover:text-gray-600 transition-colors"
+                onClick={() => setShowPreviews(false)}
+                type="button"
+              >
+                Hide
+              </button>
+            </div>
+
+            <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-3">
+              {Array.from({ length: pageCount }, (_, i) => {
+                const pageNumber = i + 1;
+                return (
+                  <button
+                    key={i}
+                    onClick={() => handlePreviewClick(pageNumber)}
+                    className="group relative aspect-[3/4] rounded-lg border-2 overflow-hidden bg-white transition-all border-gray-200 hover:border-gray-300 hover:shadow-sm"
+                    aria-label={`Use page ${pageNumber} in range builder`}
+                    type="button"
+                  >
+                    {thumbUrls[i] ? (
+                      <img
+                        src={thumbUrls[i]!}
+                        alt={`Page ${pageNumber} preview`}
+                        className="w-full h-full object-contain bg-white"
+                        draggable={false}
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center bg-gray-50">
+                        {isRenderingThumbs ? (
+                          <Loader2 className="w-4 h-4 text-gray-300 animate-spin" aria-hidden="true" />
+                        ) : (
+                          <span className="text-sm font-semibold text-gray-300">{pageNumber}</span>
+                        )}
+                      </div>
+                    )}
+                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/5 transition-colors" />
+                    <span className="absolute bottom-1 left-2 text-xs text-gray-600 bg-white/80 backdrop-blur px-1.5 py-0.5 rounded">
+                      p. {pageNumber}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+
+            <div className="flex items-center justify-between">
+              <p className="text-xs text-gray-400">
+                Click once to set a start page, then click again to set an end page.
+              </p>
+              <button
+                className="text-xs text-gray-400 hover:text-gray-600 transition-colors"
+                onClick={() => { rangeStartRef.current = null; toast.message("Range start cleared."); }}
+                type="button"
+              >
+                Clear start
+              </button>
+            </div>
+          </div>
+        )}
+
+        {file && mode === "ranges" && !showPreviews && (
+          <div className="flex justify-end">
+            <Button variant="outline" size="sm" onClick={() => setShowPreviews(true)}>
+              Show page previews
+            </Button>
           </div>
         )}
 
@@ -181,7 +323,15 @@ export function SplitPDFClient() {
 
         {results.length > 0 && (
           <div className="bg-white border border-gray-200 rounded-xl p-5 space-y-3">
-            <h2 className="text-sm font-semibold text-gray-800">Download parts</h2>
+            <div className="flex items-center justify-between">
+              <h2 className="text-sm font-semibold text-gray-800">Download parts</h2>
+              {results.length > 1 && (
+                <Button variant="outline" size="sm" onClick={downloadAllAsZip} className="gap-2">
+                  <Download className="w-4 h-4" />
+                  Download all (.zip)
+                </Button>
+              )}
+            </div>
             <div className="flex flex-col gap-2">
               {results.map((result, i) => (
                 <div key={i} className="flex items-center justify-between bg-gray-50 rounded-lg px-3 py-2">

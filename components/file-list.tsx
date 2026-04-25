@@ -29,16 +29,28 @@ interface FileListProps {
   onRemove: (id: string) => void;
   onReorder: (ids: string[]) => void;
   icon?: React.ReactNode;
+  renderLeft?: (item: FileItem) => React.ReactNode;
+  getTitle?: (item: FileItem) => string;
+  getMeta?: (item: FileItem) => string | undefined;
+  renderActions?: (item: FileItem) => React.ReactNode;
 }
 
 function SortableItem({
   item,
   onRemove,
   icon,
+  renderLeft,
+  getTitle,
+  getMeta,
+  renderActions,
 }: {
   item: FileItem;
   onRemove: (id: string) => void;
   icon?: React.ReactNode;
+  renderLeft?: (item: FileItem) => React.ReactNode;
+  getTitle?: (item: FileItem) => string;
+  getMeta?: (item: FileItem) => string | undefined;
+  renderActions?: (item: FileItem) => React.ReactNode;
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
     useSortable({ id: item.id });
@@ -52,6 +64,8 @@ function SortableItem({
   const sizeKB = (item.file.size / 1024).toFixed(0);
   const sizeMB = (item.file.size / 1024 / 1024).toFixed(1);
   const displaySize = item.file.size > 1024 * 1024 ? `${sizeMB} MB` : `${sizeKB} KB`;
+  const title = getTitle ? getTitle(item) : item.file.name;
+  const meta = getMeta ? getMeta(item) : displaySize;
 
   return (
     <div
@@ -67,9 +81,20 @@ function SortableItem({
       >
         <GripVertical className="w-4 h-4" />
       </button>
-      {icon && <span className="text-gray-400">{icon}</span>}
-      <span className="flex-1 text-sm text-gray-800 truncate">{item.file.name}</span>
-      <span className="text-xs text-gray-400 shrink-0">{displaySize}</span>
+      {renderLeft ? (
+        <span className="shrink-0">{renderLeft(item)}</span>
+      ) : (
+        icon && <span className="text-gray-400">{icon}</span>
+      )}
+      <div className="flex-1 min-w-0">
+        <span className="block text-sm text-gray-800 truncate">{title}</span>
+        {meta && <span className="block text-xs text-gray-400 truncate">{meta}</span>}
+      </div>
+      {renderActions && (
+        <span className="shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+          {renderActions(item)}
+        </span>
+      )}
       <Button
         variant="ghost"
         size="icon"
@@ -83,7 +108,16 @@ function SortableItem({
   );
 }
 
-export function FileList({ items, onRemove, onReorder, icon }: FileListProps) {
+export function FileList({
+  items,
+  onRemove,
+  onReorder,
+  icon,
+  renderLeft,
+  getTitle,
+  getMeta,
+  renderActions,
+}: FileListProps) {
   const sensors = useSensors(
     useSensor(PointerSensor),
     useSensor(KeyboardSensor, {
@@ -108,7 +142,16 @@ export function FileList({ items, onRemove, onReorder, icon }: FileListProps) {
       <SortableContext items={items.map((i) => i.id)} strategy={verticalListSortingStrategy}>
         <div className="flex flex-col gap-2">
           {items.map((item) => (
-            <SortableItem key={item.id} item={item} onRemove={onRemove} icon={icon} />
+            <SortableItem
+              key={item.id}
+              item={item}
+              onRemove={onRemove}
+              icon={icon}
+              renderLeft={renderLeft}
+              getTitle={getTitle}
+              getMeta={getMeta}
+              renderActions={renderActions}
+            />
           ))}
         </div>
       </SortableContext>
