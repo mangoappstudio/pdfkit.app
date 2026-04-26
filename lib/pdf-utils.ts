@@ -1,4 +1,4 @@
-import { PDFDocument, degrees, rgb, StandardFonts } from "pdf-lib";
+import { PDFDocument, degrees, rgb, StandardFonts, PDFFont } from "pdf-lib";
 
 // Merge multiple PDF files into one
 export async function mergePDFs(files: File[]): Promise<Uint8Array> {
@@ -332,6 +332,147 @@ export async function addWatermark(
       }
     }
   }
+  return pdfDoc.save();
+}
+
+export interface CoverPageOptions {
+  title: string;
+  note?: string;
+  margin?: number; // points
+  titleFontSize?: number; // points
+  noteFontSize?: number; // points
+}
+
+function truncateWithEllipsisToFit(
+  font: PDFFont,
+  text: string,
+  fontSize: number,
+  maxWidth: number
+): string {
+  const ellipsis = "…";
+  const trimmed = text.trimEnd();
+  if (!trimmed) return ellipsis;
+  const fits = (s: string) => font.widthOfTextAtSize(s, fontSize) <= maxWidth;
+  if (fits(trimmed)) return trimmed;
+  let current = trimmed;
+  while (current.length > 0 && !fits(current + ellipsis)) {
+    current = current.slice(0, -1).trimEnd();
+  }
+  return (current || "").trimEnd() + ellipsis;
+}
+
+function wrapLine(font: PDFFont, line: string, fontSize: number, maxWidth: number): string[] {
+  const raw = line.trimEnd();
+  if (!raw) return [""];
+  const words = raw.split(/\s+/g);
+  const out: string[] = [];
+  let current = "";
+  for (const w of words) {
+    const candidate = current ? `${current} ${w}` : w;
+    if (font.widthOfTextAtSize(candidate, fontSize) <= maxWidth) {
+      current = candidate;
+      continue;
+    }
+    if (current) out.push(current);
+    // Extremely long word: hard-cut to fit.
+    if (font.widthOfTextAtSize(w, fontSize) <= maxWidth) {
+      current = w;
+    } else {
+      let cut = w;
+      while (cut.length > 1 && font.widthOfTextAtSize(cut, fontSize) > maxWidth) {
+        cut = cut.slice(0, -1);
+      }
+      out.push(cut);
+      current = w.slice(cut.length).trim();
+      if (current) {
+        // Recursively wrap the remainder.
+        wrapLine(font, current, fontSize, maxWidth).forEach((l) => out.push(l));
+        current = "";
+      }
+    }
+  }
+  if (current) out.push(current);
+  return out;
+}
+
+function wrapText(font: PDFFont, text: string, fontSize: number, maxWidth: number): string[] {
+  const lines = text.replace(/\r\n/g, "\n").split("\n");
+  const out: string[] = [];
+  for (const line of lines) {
+    wrapLine(font, line, fontSize, maxWidth).forEach((l) => out.push(l));
+  }
+  return out;
+}
+
+export async function addCoverPage(file: File, options: CoverPageOptions): Promise<Uint8Array> {
+  const { title, note, margin = 72, titleFontSize = 28, noteFontSize = 12 } = options;
+  const bytes = await file.arrayBuffer();
+  const pdfDoc = await PDFDocument.load(bytes);
+
+  const pages = pdfDoc.getPages();
+  const firstPage = pages[0] ?? null;
+  const size = firstPage ? firstPage.getSize() : null;
+
+  const coverPage = size ? pdfDoc.insertPage(0, [size.width, size.height]) : pdfDoc.insertPage(0);
+  const { width, height } = coverPage.getSize();
+
+  const titleFont = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+  const noteFont = await pdfDoc.embedFont(StandardFonts.Helvetica);
+
+  const maxTextWidth = Math.max(1, width - margin * 2);
+
+  const titleTrimmed = (title ?? "").toString().trim();
+  const safeTitle = titleTrimmed ? titleTrimmed : "Document Packet";
+  const titleText = truncateWithEllipsisToFit(titleFont, safeTitle, titleFontSize, maxTextWidth);
+  const titleWidth = titleFont.widthOfTextAtSize(titleText, titleFontSize);
+
+  const titleX = (width - titleWidth) / 2;
+  const titleY = height - margin - titleFontSize;
+  coverPage.drawText(titleText, {
+    x: titleX,
+    y: titleY,
+    size: titleFontSize,
+    font: titleFont,
+    color: rgb(0, 0, 0),
+    opacity: 1,
+  });
+
+  const noteTrimmed = (note ?? "").toString().trim();
+  if (noteTrimmed) {
+    const gap = Math.max(18, titleFontSize * 0.6);
+    let y = titleY - gap;
+    const lineHeight = noteFontSize * 1.4;
+    const minY = margin;
+
+    const lines = wrapText(noteFont, noteTrimmed, noteFontSize, maxTextWidth);
+    const visible: string[] = [];
+    for (const line of lines) {
+      if (y - noteFontSize < minY) break;
+      visible.push(line);
+      y -= lineHeight;
+    }
+
+    const truncated = visible.length < lines.length;
+    if (visible.length > 0 && truncated) {
+      const lastIdx = visible.length - 1;
+      visible[lastIdx] = truncateWithEllipsisToFit(noteFont, visible[lastIdx] ?? "", noteFontSize, maxTextWidth);
+    }
+
+    // Reset y to start position and draw the visible lines.
+    y = titleY - gap;
+    for (const line of visible) {
+      coverPage.drawText(line, {
+        x: margin,
+        y,
+        size: noteFontSize,
+        font: noteFont,
+        color: rgb(0.2, 0.2, 0.2),
+        opacity: 1,
+      });
+      y -= lineHeight;
+    }
+  }
+
   return pdfDoc.save();
 }
 

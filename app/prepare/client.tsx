@@ -9,7 +9,16 @@ import { FileList } from "@/components/file-list";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { mergePDFs, addWatermark, imagesToPDF } from "@/lib/pdf-utils";
+import {
+  mergePDFs,
+  addCoverPage,
+  addWatermark,
+  addPageNumbers,
+  getPDFPageCount,
+  imagesToPDF,
+  type AddPageNumbersFormat,
+  type AddPageNumbersPosition,
+} from "@/lib/pdf-utils";
 import { downloadFile } from "@/lib/download";
 import { generateId } from "@/lib/file-utils";
 
@@ -38,7 +47,12 @@ export function PrepareClient() {
   const [files, setFiles] = useState<PacketFile[]>([]);
   const [exportName, setExportName] = useState("document-packet");
   const [watermarkText, setWatermarkText] = useState("");
+  const [includeCover, setIncludeCover] = useState(false);
   const [coverTitle, setCoverTitle] = useState("");
+  const [coverNote, setCoverNote] = useState("");
+  const [addPageNumbersEnabled, setAddPageNumbersEnabled] = useState(false);
+  const [pageNumberFormat, setPageNumberFormat] = useState<AddPageNumbersFormat>("current-over-total");
+  const [pageNumberPosition, setPageNumberPosition] = useState<AddPageNumbersPosition>("bottom-center");
   const [isProcessing, setIsProcessing] = useState(false);
   const [step, setStep] = useState<1 | 2 | 3>(1);
 
@@ -60,6 +74,14 @@ export function PrepareClient() {
     });
   }, []);
 
+  function bytesToPdfFile(bytes: Uint8Array, filename = "packet.pdf"): File {
+    // Ensure we hand a plain ArrayBuffer (not ArrayBufferLike) to the File constructor.
+    const copy = new Uint8Array(bytes.byteLength);
+    copy.set(bytes);
+    const ab = copy.buffer as ArrayBuffer;
+    return new File([ab], filename, { type: "application/pdf" });
+  }
+
   const handleExport = async () => {
     if (files.length === 0) return;
     setIsProcessing(true);
@@ -69,14 +91,37 @@ export function PrepareClient() {
 
       let bytes = await mergePDFs(mergeableFiles);
 
+      // Optional cover page (inserted at page 1)
+      if (includeCover) {
+        const title = (coverTitle.trim() || exportName.trim() || "Document Packet").replace(/\.pdf$/i, "");
+        const note = coverNote.trim() || undefined;
+        bytes = await addCoverPage(bytesToPdfFile(bytes), { title, note });
+      }
+
       // Apply watermark if provided
       if (watermarkText.trim()) {
-        const pdfFile = new File([bytes.buffer as ArrayBuffer], "packet.pdf", { type: "application/pdf" });
-        bytes = await addWatermark(pdfFile, {
+        bytes = await addWatermark(bytesToPdfFile(bytes), {
           text: watermarkText.trim(),
           opacity: 0.25,
           rotation: 45,
           fontSize: 48,
+        });
+      }
+
+      // Optional page numbers (applied last, above watermark)
+      if (addPageNumbersEnabled) {
+        const pdfFile = bytesToPdfFile(bytes);
+        const count = await getPDFPageCount(pdfFile);
+        const pageIndices =
+          includeCover && count > 1 ? Array.from({ length: count - 1 }, (_, i) => i + 1) : undefined;
+        bytes = await addPageNumbers(pdfFile, {
+          pageIndices,
+          format: pageNumberFormat,
+          position: pageNumberPosition,
+          fontSize: 11,
+          margin: 24,
+          color: { r: 0.2, g: 0.2, b: 0.2 },
+          startNumber: 1,
         });
       }
 
@@ -220,57 +265,149 @@ export function PrepareClient() {
         {/* Step 3: Export options */}
         {step === 3 && (
           <div className="space-y-6">
-            <div className="bg-white border border-gray-200 rounded-xl p-5 space-y-5">
-              <h2 className="text-sm font-semibold text-gray-800">Export options</h2>
+              <div className="bg-white border border-gray-200 rounded-xl p-5 space-y-5">
+                <h2 className="text-sm font-semibold text-gray-800">Export options</h2>
 
-              <div className="space-y-2">
-                <Label htmlFor="export-name">Output filename</Label>
-                <div className="flex items-center gap-2">
+                <div className="space-y-2">
+                  <Label htmlFor="export-name">Output filename</Label>
+                  <div className="flex items-center gap-2">
+                    <Input
+                      id="export-name"
+                      value={exportName}
+                      onChange={(e) => setExportName(e.target.value)}
+                      placeholder="document-packet"
+                      className="flex-1"
+                      disabled={isProcessing}
+                    />
+                    <span className="text-sm text-gray-400 shrink-0">.pdf</span>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="watermark-text">
+                    Watermark text{" "}
+                    <span className="text-gray-400 font-normal">(optional)</span>
+                  </Label>
                   <Input
-                    id="export-name"
-                    value={exportName}
-                    onChange={(e) => setExportName(e.target.value)}
-                    placeholder="document-packet"
-                    className="flex-1"
+                    id="watermark-text"
+                    value={watermarkText}
+                    onChange={(e) => setWatermarkText(e.target.value)}
+                    placeholder="e.g. CONFIDENTIAL or DRAFT"
+                    maxLength={80}
+                    disabled={isProcessing}
                   />
-                  <span className="text-sm text-gray-400 shrink-0">.pdf</span>
+                  {watermarkText && (
+                    <p className="text-xs text-gray-400">
+                      Watermark will be applied to all pages at 25% opacity.
+                      {includeCover ? " Watermark applies to the cover page too." : ""}
+                    </p>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Cover page</Label>
+                  <label className="flex items-center gap-2 text-sm text-gray-700">
+                    <input
+                      type="checkbox"
+                      className="h-4 w-4 rounded border-gray-300 text-blue-600"
+                      checked={includeCover}
+                      disabled={isProcessing}
+                      onChange={(e) => {
+                        const next = e.target.checked;
+                        setIncludeCover(next);
+                        if (next && !coverTitle.trim()) {
+                          setCoverTitle((exportName.trim() || "Document Packet").replace(/\.pdf$/i, ""));
+                        }
+                      }}
+                    />
+                    Include cover page <span className="text-gray-400">(optional)</span>
+                  </label>
+                  {includeCover && (
+                    <div className="space-y-3 pt-2">
+                      <div className="space-y-2">
+                        <Label htmlFor="cover-title">Cover title</Label>
+                        <Input
+                          id="cover-title"
+                          value={coverTitle}
+                          onChange={(e) => setCoverTitle(e.target.value)}
+                          placeholder="e.g. Documents for Review"
+                          maxLength={120}
+                          disabled={isProcessing}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="cover-note">
+                          Cover note <span className="text-gray-400 font-normal">(optional)</span>
+                        </Label>
+                        <textarea
+                          id="cover-note"
+                          value={coverNote}
+                          onChange={(e) => setCoverNote(e.target.value)}
+                          placeholder="Add an optional note for the recipient…"
+                          className="w-full min-h-[96px] rounded-md border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 disabled:opacity-50"
+                          maxLength={1200}
+                          disabled={isProcessing}
+                        />
+                        <p className="text-xs text-gray-400">Long notes will be truncated to fit on one cover page.</p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Page numbers</Label>
+                  <label className="flex items-center gap-2 text-sm text-gray-700">
+                    <input
+                      type="checkbox"
+                      className="h-4 w-4 rounded border-gray-300 text-blue-600"
+                      checked={addPageNumbersEnabled}
+                      disabled={isProcessing}
+                      onChange={(e) => setAddPageNumbersEnabled(e.target.checked)}
+                    />
+                    Add page numbers <span className="text-gray-400">(optional)</span>
+                  </label>
+                  {addPageNumbersEnabled && (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
+                      <div className="space-y-2">
+                        <Label htmlFor="page-number-format">Format</Label>
+                        <select
+                          id="page-number-format"
+                          value={pageNumberFormat}
+                          onChange={(e) => setPageNumberFormat(e.target.value as AddPageNumbersFormat)}
+                          className="w-full rounded-md border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700"
+                          disabled={isProcessing}
+                        >
+                          <option value="current-over-total">1 / 10 (default)</option>
+                          <option value="current">1</option>
+                          <option value="page-current">Page 1</option>
+                          <option value="page-current-of-total">Page 1 of 10</option>
+                        </select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="page-number-position">Position</Label>
+                        <select
+                          id="page-number-position"
+                          value={pageNumberPosition}
+                          onChange={(e) => setPageNumberPosition(e.target.value as AddPageNumbersPosition)}
+                          className="w-full rounded-md border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700"
+                          disabled={isProcessing}
+                        >
+                          <option value="bottom-center">Bottom center (default)</option>
+                          <option value="bottom-left">Bottom left</option>
+                          <option value="bottom-right">Bottom right</option>
+                          <option value="top-left">Top left</option>
+                          <option value="top-right">Top right</option>
+                        </select>
+                      </div>
+                      {includeCover && (
+                        <p className="text-xs text-gray-400 sm:col-span-2">
+                          With a cover page enabled, numbering starts after the cover and begins at 1.
+                        </p>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="watermark-text">
-                  Watermark text{" "}
-                  <span className="text-gray-400 font-normal">(optional)</span>
-                </Label>
-                <Input
-                  id="watermark-text"
-                  value={watermarkText}
-                  onChange={(e) => setWatermarkText(e.target.value)}
-                  placeholder="e.g. CONFIDENTIAL or DRAFT"
-                  maxLength={80}
-                />
-                {watermarkText && (
-                  <p className="text-xs text-gray-400">
-                    Watermark will be applied to all pages at 25% opacity.
-                  </p>
-                )}
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="cover-title">
-                  Cover note{" "}
-                  <span className="text-gray-400 font-normal">(optional, not yet implemented)</span>
-                </Label>
-                <Input
-                  id="cover-title"
-                  value={coverTitle}
-                  onChange={(e) => setCoverTitle(e.target.value)}
-                  placeholder="e.g. Documents for Review — April 2025"
-                  maxLength={120}
-                  disabled
-                />
-              </div>
-            </div>
 
             {/* Summary */}
             <div className="bg-gray-50 border border-gray-200 rounded-xl p-5">
