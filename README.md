@@ -28,12 +28,19 @@ Open [http://localhost:3000](http://localhost:3000).
 
 | Tool | Route | Description |
 |------|-------|-------------|
+| Redact PDF | `/redact-pdf` | Cover sensitive areas with black boxes before sharing. |
 | Merge PDF | `/merge-pdf` | Combine multiple PDFs. Drag to reorder. |
 | Split PDF | `/split-pdf` | Split by page ranges or into individual pages. |
 | Reorder Pages | `/reorder-pages` | Drag pages to reorder, rotate, or delete. |
 | Extract Pages | `/extract-pages` | Select specific pages and export. |
+| Remove Pages | `/remove-pages` | Select pages to remove and export the rest. |
 | Images to PDF | `/images-to-pdf` | Convert JPG/PNG/WebP to PDF. |
 | Add Watermark | `/add-watermark` | Add a text watermark to all pages. |
+| Document Packet Builder | `/prepare` | Assemble multiple files into a single organized PDF packet. |
+| PDF to Images | `/pdf-to-images` | Export selected pages as PNG/JPEG images (zipped). |
+| Add Page Numbers | `/add-page-numbers` | Add simple page numbers to a PDF. |
+| Remove Metadata | `/remove-metadata` | Deep scrub by rebuilding the PDF locally. |
+| Compress PDF | `/compress-pdf` | Compress scanned PDFs (lossy, flattens pages). |
 
 ## Architecture
 
@@ -87,9 +94,6 @@ These are intentionally not in the MVP:
 
 - Web Worker offloading for large file operations
 - Optional cloud processing with explicit opt-in
-- PDF compression
+- PDF compression (lossy, scanned PDFs)
 - OCR for scanned documents
 - Batch processing
-- PDF to image export
-- Add page numbers
-- Remove PDF metadata

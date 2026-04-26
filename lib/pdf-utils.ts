@@ -370,3 +370,99 @@ export async function redactPDF(file: File, boxes: RedactionBox[]): Promise<Uint
   }
   return pdfDoc.save();
 }
+
+export type AddPageNumbersFormat =
+  | "current-over-total"
+  | "current"
+  | "page-current"
+  | "page-current-of-total";
+
+export type AddPageNumbersPosition =
+  | "bottom-center"
+  | "bottom-left"
+  | "bottom-right"
+  | "top-left"
+  | "top-right";
+
+export interface AddPageNumbersOptions {
+  pageIndices?: number[]; // optional 0-based page indices to apply to; when set, numbering is sequential within the selection
+  format?: AddPageNumbersFormat;
+  startNumber?: number; // default 1
+  position?: AddPageNumbersPosition;
+  fontSize?: number; // default 11
+  margin?: number; // default 24 (PDF points)
+  color?: { r: number; g: number; b: number }; // 0-1
+}
+
+export async function addPageNumbers(file: File, options: AddPageNumbersOptions = {}): Promise<Uint8Array> {
+  const {
+    pageIndices,
+    format = "current-over-total",
+    startNumber = 1,
+    position = "bottom-center",
+    fontSize = 11,
+    margin = 24,
+    color = { r: 0.2, g: 0.2, b: 0.2 },
+  } = options;
+
+  const bytes = await file.arrayBuffer();
+  const pdfDoc = await PDFDocument.load(bytes);
+  const pages = pdfDoc.getPages();
+  const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
+
+  const unique = pageIndices ? [...new Set(pageIndices)] : null;
+  const indices = unique ? unique.filter((i) => i >= 0 && i < pages.length).sort((a, b) => a - b) : null;
+  const applyAll = !indices || indices.length === 0;
+  const applyList = applyAll ? pages.map((_, i) => i) : indices;
+  const totalForLabel = applyAll ? pages.length : applyList.length;
+
+  const formatLabel = (n: number) => {
+    if (format === "current") return `${n}`;
+    if (format === "page-current") return `Page ${n}`;
+    if (format === "page-current-of-total") return `Page ${n} of ${totalForLabel}`;
+    return `${n} / ${totalForLabel}`;
+  };
+
+  for (let seqIndex = 0; seqIndex < applyList.length; seqIndex++) {
+    const pageIndex = applyList[seqIndex]!;
+    const page = pages[pageIndex];
+    if (!page) continue;
+
+    const currentNumber = Math.max(1, Math.floor(startNumber)) + (applyAll ? pageIndex : seqIndex);
+    const label = formatLabel(currentNumber);
+    const { width, height } = page.getSize();
+    const textWidth = font.widthOfTextAtSize(label, fontSize);
+
+    const x =
+      position === "bottom-left" || position === "top-left"
+        ? margin
+        : position === "bottom-right" || position === "top-right"
+        ? width - margin - textWidth
+        : (width - textWidth) / 2;
+
+    const y =
+      position === "top-left" || position === "top-right"
+        ? height - margin - fontSize
+        : margin;
+
+    page.drawText(label, {
+      x,
+      y,
+      size: fontSize,
+      font,
+      color: rgb(color.r, color.g, color.b),
+      opacity: 1,
+    });
+  }
+
+  return pdfDoc.save();
+}
+
+export async function deepScrubPDF(file: File): Promise<Uint8Array> {
+  const bytes = await file.arrayBuffer();
+  const src = await PDFDocument.load(bytes);
+  const out = await PDFDocument.create();
+  const copiedPages = await out.copyPages(src, src.getPageIndices());
+  copiedPages.forEach((page) => out.addPage(page));
+  return out.save();
+}

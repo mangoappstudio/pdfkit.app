@@ -11,6 +11,10 @@ import {
   Scissors,
   ArrowUpDown,
   ImagePlus,
+  ImageDown,
+  Hash,
+  Eraser,
+  Shrink,
   ShieldCheck,
   Cpu,
   UserX,
@@ -45,6 +49,20 @@ const primaryTools = [
     title: "Watermark PDF",
     description: "Add a watermark before sharing so the recipient knows the document's status.",
     color: "bg-amber-50 text-amber-600",
+  },
+  {
+    href: "/add-page-numbers",
+    icon: Hash,
+    title: "Add Page Numbers",
+    description: "Add simple pagination before sharing, filing, or printing your document.",
+    color: "bg-cyan-50 text-cyan-600",
+  },
+  {
+    href: "/remove-metadata",
+    icon: Eraser,
+    title: "Remove Metadata",
+    description: "Rebuild the PDF locally to scrub document metadata before sharing.",
+    color: "bg-slate-50 text-slate-600",
   },
   {
     href: "/merge-pdf",
@@ -83,6 +101,20 @@ const supportingTools = [
     title: "Images to PDF",
     description: "Convert JPG, PNG, or WebP images into a single PDF.",
     color: "bg-pink-50 text-pink-600",
+  },
+  {
+    href: "/pdf-to-images",
+    icon: ImageDown,
+    title: "PDF to Images",
+    description: "Export selected pages as PNG or JPEG images in a zip file.",
+    color: "bg-rose-50 text-rose-600",
+  },
+  {
+    href: "/compress-pdf",
+    icon: Shrink,
+    title: "Compress PDF",
+    description: "Best for scanned PDFs. Flatten pages to reduce file size before sharing.",
+    color: "bg-teal-50 text-teal-600",
   },
 ];
 
@@ -286,4 +318,3 @@ export default function HomePage() {
     </div>
   );
 }
-
