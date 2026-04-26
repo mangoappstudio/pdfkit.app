@@ -14,13 +14,13 @@ PDFKit.app is a privacy-first set of PDF utilities. **All document processing is
 
 ## Useful commands
 
-- Install deps (preferred with lockfile): `npm ci`
-- Dev server: `npm run dev`
-- Lint: `npm run lint`
-- Production build: `npm run build`
-- Run production server: `npm run start`
+- Install deps (preferred with lockfile): `yarn install --frozen-lockfile`
+- Dev server: `yarn dev`
+- Lint: `yarn lint`
+- Production build: `yarn build`
+- Run production server: `yarn start`
 
-Note: `postinstall` copies `node_modules/pdfjs-dist/build/pdf.worker.min.mjs` → `public/pdf.worker.min.mjs`. If PDF previews/redaction rendering break with a missing worker, re-run `npm install`/`npm ci`.
+Note: `postinstall` copies `node_modules/pdfjs-dist/build/pdf.worker.min.mjs` → `public/pdf.worker.min.mjs`. If PDF previews/redaction rendering break with a missing worker, re-run `yarn install`.
 
 ## Repo map (where things live)
 

@@ -18,8 +18,8 @@ A privacy-first PDF utility app that processes files entirely in your browser. N
 ## Local Dev
 
 ```bash
-npm install
-npm run dev
+yarn install --frozen-lockfile
+yarn dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000).
