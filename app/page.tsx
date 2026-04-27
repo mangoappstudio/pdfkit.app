@@ -312,6 +312,14 @@ export default function HomePage() {
             <Link href="/#tools" className="hover:text-gray-900 transition-colors">Tools</Link>
             <Link href="/privacy" className="hover:text-gray-900 transition-colors">Privacy</Link>
             <Link href="/about" className="hover:text-gray-900 transition-colors">About</Link>
+            <a
+              href="https://github.com/mangoappstudio/pdfkit.app"
+              target="_blank"
+              rel="noreferrer"
+              className="hover:text-gray-900 transition-colors"
+            >
+              GitHub
+            </a>
           </nav>
         </div>
       </footer>
