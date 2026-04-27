@@ -1,6 +1,9 @@
+import type { Metadata } from "next";
 import Link from "next/link";
+import { StructuredData } from "@/components/structured-data";
 import { Button } from "@/components/ui/button";
 import { SiteNav } from "@/components/site-nav";
+import { GITHUB_REPO_URL, SITE_DESCRIPTION, SITE_NAME, SITE_URL } from "@/lib/site";
 import {
   EyeOff,
   FileOutput,
@@ -20,6 +23,36 @@ import {
   UserX,
   CheckCircle2,
 } from "lucide-react";
+
+export const metadata: Metadata = {
+  alternates: {
+    canonical: "/",
+  },
+};
+
+const structuredData = {
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "WebSite",
+      "@id": `${SITE_URL}/#website`,
+      url: SITE_URL,
+      name: SITE_NAME,
+      description: SITE_DESCRIPTION,
+      sameAs: [GITHUB_REPO_URL],
+    },
+    {
+      "@type": "WebApplication",
+      "@id": `${SITE_URL}/#app`,
+      name: SITE_NAME,
+      url: SITE_URL,
+      description: SITE_DESCRIPTION,
+      applicationCategory: "UtilitiesApplication",
+      operatingSystem: "Web",
+      isPartOf: { "@id": `${SITE_URL}/#website` },
+    },
+  ],
+} as const;
 
 const primaryTools = [
   {
@@ -148,6 +181,7 @@ export default function HomePage() {
   return (
     <div className="min-h-screen bg-white">
       <SiteNav />
+      <StructuredData data={structuredData} />
 
       {/* Hero */}
       <section className="max-w-6xl mx-auto px-4 sm:px-6 pt-20 pb-16 text-center">

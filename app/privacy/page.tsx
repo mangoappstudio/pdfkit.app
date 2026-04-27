@@ -2,16 +2,33 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { ShieldCheck, ArrowLeft } from "lucide-react";
 import { SiteNav } from "@/components/site-nav";
+import { StructuredData } from "@/components/structured-data";
+import { SITE_NAME, SITE_URL } from "@/lib/site";
 
 export const metadata: Metadata = {
   title: "Privacy",
   description: "How PDFKit.app handles your files and data.",
+  alternates: {
+    canonical: "/privacy",
+  },
 };
 
 export default function PrivacyPage() {
+  const structuredData = {
+    "@context": "https://schema.org",
+    "@type": "PrivacyPolicy",
+    name: `Privacy | ${SITE_NAME}`,
+    url: `${SITE_URL}/privacy`,
+    isPartOf: {
+      "@type": "WebSite",
+      "@id": `${SITE_URL}/#website`,
+    },
+  } as const;
+
   return (
     <div className="min-h-screen bg-white">
       <SiteNav />
+      <StructuredData data={structuredData} />
 
       <main className="max-w-3xl mx-auto px-4 sm:px-6 py-12">
         <Link
@@ -91,4 +108,3 @@ export default function PrivacyPage() {
     </div>
   );
 }
-

@@ -2,16 +2,33 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { SiteNav } from "@/components/site-nav";
+import { StructuredData } from "@/components/structured-data";
+import { SITE_NAME, SITE_URL } from "@/lib/site";
 
 export const metadata: Metadata = {
   title: "About",
   description: "About PDFKit.app — a private PDF preparation tool.",
+  alternates: {
+    canonical: "/about",
+  },
 };
 
 export default function AboutPage() {
+  const structuredData = {
+    "@context": "https://schema.org",
+    "@type": "AboutPage",
+    name: `About | ${SITE_NAME}`,
+    url: `${SITE_URL}/about`,
+    isPartOf: {
+      "@type": "WebSite",
+      "@id": `${SITE_URL}/#website`,
+    },
+  } as const;
+
   return (
     <div className="min-h-screen bg-white">
       <SiteNav />
+      <StructuredData data={structuredData} />
 
       <main className="max-w-3xl mx-auto px-4 sm:px-6 py-12">
         <Link
@@ -55,4 +72,3 @@ export default function AboutPage() {
     </div>
   );
 }
-

@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { Github } from "lucide-react";
 
 const githubRepoUrl = "https://github.com/mangoappstudio/pdfkit.app";
 
@@ -24,24 +23,15 @@ export function SiteNav() {
             <Link href="/about" className="hover:text-gray-900 transition-colors">
               About
             </Link>
-            <a
-              href={githubRepoUrl}
-              target="_blank"
-              rel="noreferrer"
-              className="hover:text-gray-900 transition-colors"
-            >
-              GitHub
-            </a>
           </nav>
 
           <a
             href={githubRepoUrl}
             target="_blank"
             rel="noreferrer"
-            aria-label="View source on GitHub"
-            className="inline-flex items-center justify-center rounded-md text-gray-600 hover:text-gray-900 transition-colors"
+            className="text-sm text-gray-600 hover:text-gray-900 transition-colors"
           >
-            <Github className="w-5 h-5" />
+            GitHub
           </a>
         </div>
       </div>
