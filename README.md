@@ -36,6 +36,27 @@ Open [http://localhost:3000](http://localhost:3000).
 Note: `postinstall` copies `pdfjs-dist`’s worker to `public/pdf.worker.min.mjs`. If
 PDF previews break due to a missing worker, re-run `yarn install`.
 
+## Self-hosting
+
+PDFKit.app can be self-hosted on any Node.js server that can run a Next.js production build.
+
+```bash
+# Install dependencies
+yarn install --frozen-lockfile
+
+# Build for production
+yarn build
+
+# Start the production server (defaults to port 3000)
+yarn start
+```
+
+Notes:
+
+- Self-hosting does not change the privacy model: the server only serves the app; PDF processing still happens locally in the browser (no uploads).
+- If you deploy under a custom domain, update `lib/site.ts` (`SITE_URL`, etc.) so canonical URLs/metadata match your host.
+- Ensure `public/pdf.worker.min.mjs` exists in your deployment (it is created by the `postinstall` script).
+
 ## Tools
 
 | Tool | Route | Description |
