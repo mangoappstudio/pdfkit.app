@@ -1,0 +1,51 @@
+name: Bug report
+description: Report a bug in PDFKit.app
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report a bug.
+
+  - type: input
+    id: tool
+    attributes:
+      label: Tool/Route
+      description: Which tool were you using? (e.g. `/merge-pdf`)
+      placeholder: /merge-pdf
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+    validations:
+      required: true
+
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1.
+        2.
+        3.
+    validations:
+      required: true
+
+  - type: input
+    id: browser
+    attributes:
+      label: Browser + version
+      placeholder: Chrome 125 / Firefox 127 / Safari 18
+    validations:
+      required: true
+

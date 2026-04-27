@@ -2,6 +2,15 @@
 
 A privacy-first PDF utility app that processes files entirely in your browser. No uploads. No accounts. No cloud processing.
 
+## Open source
+
+- License: MIT (`LICENSE`)
+- Security: see `SECURITY.md`
+- Contributing: see `CONTRIBUTING.md`
+- Code of Conduct: see `CODE_OF_CONDUCT.md`
+- Architecture notes: see `ARCHITECTURE.md`
+- Third-party notices: see `THIRD_PARTY_NOTICES.md`
+
 ## Stack
 
 - **Next.js 16** (App Router)
@@ -23,6 +32,9 @@ yarn dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000).
+
+Note: `postinstall` copies `pdfjs-dist`’s worker to `public/pdf.worker.min.mjs`. If
+PDF previews break due to a missing worker, re-run `yarn install`.
 
 ## Tools
 
@@ -97,3 +109,7 @@ These are intentionally not in the MVP:
 - PDF compression (lossy, scanned PDFs)
 - OCR for scanned documents
 - Batch processing
+
+## License
+
+MIT. See `LICENSE`.

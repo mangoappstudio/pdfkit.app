@@ -1,7 +1,10 @@
 {
   "name": "pdfkit.app",
+  "description": "Privacy-first PDF utilities that run entirely in the browser (no uploads).",
   "version": "0.1.0",
   "private": true,
+  "license": "MIT",
+  "author": "Vivek Maskara",
   "packageManager": "yarn@1.22.22",
   "scripts": {
     "dev": "next dev",
