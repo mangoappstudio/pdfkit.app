@@ -9,6 +9,7 @@ export function formatFileSize(bytes: number): string {
 }
 
 export const PDF_ACCEPT = { "application/pdf": [".pdf"] };
+export const HTML_ACCEPT = { "text/html": [".html", ".htm"] };
 export const IMAGE_ACCEPT = {
   "image/jpeg": [".jpg", ".jpeg"],
   "image/png": [".png"],

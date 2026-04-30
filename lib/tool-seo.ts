@@ -150,6 +150,85 @@ export const toolSeo: Record<string, ToolSeoConfig> = {
       "Export a new compressed PDF.",
     ],
   },
+  "/protect-pdf": {
+    path: "/protect-pdf",
+    title: "Protect PDF",
+    description: "Password-protect a PDF and optionally set viewer permissions before sharing.",
+    bullets: [
+      "Add password protection (AES/RC4 options).",
+      "Optionally set PDF permissions (print, copy, edit, etc.).",
+      "Runs entirely in your browser (no uploads).",
+      "Download a protected PDF instantly.",
+    ],
+    faqs: [
+      {
+        question: "Are my files uploaded?",
+        answer: "No. All PDF processing happens locally in your browser.",
+      },
+      {
+        question: "What is the owner password?",
+        answer:
+          "The owner password grants full access and may be required to remove protection or change permissions in some PDFs. If you set one, store it securely.",
+      },
+    ],
+  },
+  "/unlock-pdf": {
+    path: "/unlock-pdf",
+    title: "Unlock PDF",
+    description: "Remove password protection from a PDF when you know the password.",
+    bullets: [
+      "Remove password protection from an encrypted PDF.",
+      "Try user password first; owner password may be required.",
+      "Runs locally in your browser (no uploads).",
+      "Download an unlocked copy after processing.",
+    ],
+    faqs: [
+      {
+        question: "Do I need the owner password?",
+        answer:
+          "Sometimes. Some PDFs allow opening with a user password but require the owner password to remove protection or permissions.",
+      },
+      {
+        question: "Will this work on every PDF?",
+        answer:
+          "Most modern encrypted PDFs should work, but some files (or uncommon protection settings) may not be supported by all browsers and viewers.",
+      },
+    ],
+  },
+  "/rotate-pdf": {
+    path: "/rotate-pdf",
+    title: "Rotate PDF",
+    description: "Rotate every page in a PDF by 90°, 180°, or 270°.",
+    bullets: [
+      "Rotate all pages in one click.",
+      "Choose direction and angle.",
+      "Runs entirely in your browser (no uploads).",
+      "For per-page rotation, use Reorder Pages.",
+    ],
+  },
+  "/html-to-pdf": {
+    path: "/html-to-pdf",
+    title: "HTML to PDF",
+    description: "Convert HTML code or an HTML file into a downloadable PDF (rasterized).",
+    bullets: [
+      "Paste HTML or upload an .html file.",
+      "Choose A4/Letter and portrait/landscape.",
+      "Output is screenshot-style (rasterized).",
+      "Runs locally in your browser (no uploads).",
+    ],
+    faqs: [
+      {
+        question: "Is the output selectable text?",
+        answer:
+          "No. This tool renders HTML to a canvas and embeds images into the PDF, so the output is rasterized (like a screenshot).",
+      },
+      {
+        question: "Will external images and fonts load?",
+        answer:
+          "Not always. Browser security restrictions can block external resources. Inline styles and embedded (base64) assets work best.",
+      },
+    ],
+  },
   "/prepare": {
     path: "/prepare",
     title: "Document Packet Builder",
@@ -162,4 +241,3 @@ export const toolSeo: Record<string, ToolSeoConfig> = {
     ],
   },
 };
-

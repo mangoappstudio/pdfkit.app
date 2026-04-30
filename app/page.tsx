@@ -18,6 +18,10 @@ import {
   Hash,
   Eraser,
   Shrink,
+  Lock,
+  Unlock,
+  RotateCw,
+  FileCode2,
   ShieldCheck,
   Cpu,
   UserX,
@@ -115,6 +119,20 @@ const primaryTools = [
 
 const supportingTools = [
   {
+    href: "/protect-pdf",
+    icon: Lock,
+    title: "Protect PDF",
+    description: "Add password protection and optional permissions before sharing a document.",
+    color: "bg-emerald-50 text-emerald-600",
+  },
+  {
+    href: "/unlock-pdf",
+    icon: Unlock,
+    title: "Unlock PDF",
+    description: "Remove password protection when you know the password (user or owner).",
+    color: "bg-lime-50 text-lime-600",
+  },
+  {
     href: "/split-pdf",
     icon: Scissors,
     title: "Split PDF",
@@ -129,6 +147,13 @@ const supportingTools = [
     color: "bg-green-50 text-green-600",
   },
   {
+    href: "/rotate-pdf",
+    icon: RotateCw,
+    title: "Rotate PDF",
+    description: "Rotate all pages 90°, 180°, or 270° in one click.",
+    color: "bg-emerald-50 text-emerald-600",
+  },
+  {
     href: "/images-to-pdf",
     icon: ImagePlus,
     title: "Images to PDF",
@@ -141,6 +166,13 @@ const supportingTools = [
     title: "PDF to Images",
     description: "Export selected pages as PNG or JPEG images in a zip file.",
     color: "bg-rose-50 text-rose-600",
+  },
+  {
+    href: "/html-to-pdf",
+    icon: FileCode2,
+    title: "HTML to PDF",
+    description: "Convert HTML code (or an HTML file) into a downloadable PDF.",
+    color: "bg-sky-50 text-sky-600",
   },
   {
     href: "/compress-pdf",

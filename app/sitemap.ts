@@ -12,12 +12,16 @@ const routes = [
   "/add-watermark",
   "/add-page-numbers",
   "/remove-metadata",
+  "/protect-pdf",
+  "/unlock-pdf",
   "/merge-pdf",
   "/prepare",
   "/split-pdf",
   "/reorder-pages",
+  "/rotate-pdf",
   "/images-to-pdf",
   "/pdf-to-images",
+  "/html-to-pdf",
   "/compress-pdf",
 ] as const;
 
@@ -30,4 +34,3 @@ export default function sitemap(): MetadataRoute.Sitemap {
     priority: route === "/" ? 1 : 0.7,
   }));
 }
-
