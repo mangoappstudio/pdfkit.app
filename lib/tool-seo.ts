@@ -7,6 +7,28 @@ export interface ToolSeoConfig {
 }
 
 export const toolSeo: Record<string, ToolSeoConfig> = {
+  "/edit-pdf": {
+    path: "/edit-pdf",
+    title: "Edit PDF",
+    description: "Edit a PDF locally by applying overlay edits (cover + redraw), then export a new PDF.",
+    bullets: [
+      "Runs entirely in your browser (no uploads).",
+      "Edit text by covering the original and drawing new text on top.",
+      "Add new text boxes, whiteout regions, and freehand drawing.",
+      "Exports a new PDF with your edits applied.",
+    ],
+    faqs: [
+      {
+        question: "Is this the same as editing in Adobe Acrobat?",
+        answer:
+          "Not exactly. True in-place editing of existing PDF content is hard to do reliably without a full PDF engine. This tool keeps everything local by applying edits as overlays (cover + redraw) and exporting a new PDF.",
+      },
+      {
+        question: "Are my files uploaded?",
+        answer: "No. All processing happens locally in your browser.",
+      },
+    ],
+  },
   "/redact-pdf": {
     path: "/redact-pdf",
     title: "Redact PDF",

@@ -26,6 +26,7 @@ import {
   Cpu,
   UserX,
   CheckCircle2,
+  PencilLine,
 } from "lucide-react";
 
 export const metadata: Metadata = {
@@ -59,6 +60,13 @@ const structuredData = {
 } as const;
 
 const primaryTools = [
+  {
+    href: "/edit-pdf",
+    icon: PencilLine,
+    title: "Edit PDF",
+    description: "Make quick edits locally: cover + replace text, add text boxes, whiteout, and draw.",
+    color: "bg-violet-50 text-violet-600",
+  },
   {
     href: "/redact-pdf",
     icon: EyeOff,
