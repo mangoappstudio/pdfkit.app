@@ -554,7 +554,7 @@
   resolved "https://registry.yarnpkg.com/@napi-rs/canvas-win32-x64-msvc/-/canvas-win32-x64-msvc-0.1.100.tgz#1e52883f8784ffdbe52dc2d47b05a0886aa6e9cf"
   integrity sha512-MyT1j3mHC2+Lu4pBi9mKyMJhtP6U7k7EldY7sj/uS5gJA65gTXt8MefJQXLJo5d/vZbuWmfxzkEUNc/urV3pHA==
 
-"@napi-rs/canvas@^0.1.96":
+"@napi-rs/canvas@^0.1.100":
   version "0.1.100"
   resolved "https://registry.yarnpkg.com/@napi-rs/canvas/-/canvas-0.1.100.tgz#2c89a15c28a62e1372be23fd474762ae1a8b16b7"
   integrity sha512-xglYA6q3XO5P3BNJYxVZ1IV7DLVjp1Py6nwag88YntrS+3vKHyYcMqXVS4ZztJmwz2uGvz1FWhI/4LgbR5uQDA==
@@ -2956,11 +2956,6 @@ node-exports-info@^1.6.0:
     object.entries "^1.1.9"
     semver "^6.3.1"
 
-node-readable-to-web-readable-stream@^0.4.2:
-  version "0.4.2"
-  resolved "https://registry.yarnpkg.com/node-readable-to-web-readable-stream/-/node-readable-to-web-readable-stream-0.4.2.tgz#634da58d3fe42a47d4608f1d7f14f85e18daeabe"
-  integrity sha512-/cMZNI34v//jUTrI+UIo4ieHAB5EZRY/+7OmXZgBxaWBMcW2tGdceIw06RFxWxrKZ5Jp3sI2i5TsRo+CBhtVLQ==
-
 node-releases@^2.0.36:
   version "2.0.38"
   resolved "https://registry.yarnpkg.com/node-releases/-/node-releases-2.0.38.tgz#791569b9e4424a044e12c3abfad418ed83ce9947"
@@ -3119,13 +3114,12 @@ pdf-lib@^1.17.1:
     pako "^1.0.11"
     tslib "^1.11.1"
 
-pdfjs-dist@^5.6.205:
-  version "5.6.205"
-  resolved "https://registry.yarnpkg.com/pdfjs-dist/-/pdfjs-dist-5.6.205.tgz#091023a47811bd9fed074fe49c52bd2dc30bb0bf"
-  integrity sha512-tlUj+2IDa7G1SbvBNN74UHRLJybZDWYom+k6p5KIZl7huBvsA4APi6mKL+zCxd3tLjN5hOOEE9Tv7VdzO88pfg==
+pdfjs-dist@^5.7.284:
+  version "5.7.284"
+  resolved "https://registry.yarnpkg.com/pdfjs-dist/-/pdfjs-dist-5.7.284.tgz#01d9ff1d7ccd15245bdec8524a6770feb77fbb23"
+  integrity sha512-h4EdYQczmGhbOlqc3PPZwxevn7ApdWPbovAuWXOB/DjIyigSnwfy2oze7c6mRcSr9XgLp3eN3EeL4DyySTPMFw==
   optionalDependencies:
-    "@napi-rs/canvas" "^0.1.96"
-    node-readable-to-web-readable-stream "^0.4.2"
+    "@napi-rs/canvas" "^0.1.100"
 
 picocolors@^1.0.0, picocolors@^1.1.1:
   version "1.1.1"
