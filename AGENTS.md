@@ -25,9 +25,9 @@ PDFKit.app is a privacy-first set of PDF utilities. **All document processing is
 
 Note: `postinstall` copies `node_modules/pdfjs-dist/build/pdf.worker.min.mjs` → `public/pdf.worker.min.mjs`. If PDF previews/redaction rendering break with a missing worker, re-run `yarn install`.
 
-The Cloudflare build sets `output: "export"`; the normal build intentionally
-retains the Node/Vercel output so the existing production deployment remains a
-rollback option during the migration.
+The Cloudflare build sets `output: "export"` and is deployed automatically when
+changes land on `main`. The normal build retains the Node output for local
+production testing and self-hosting.
 
 ## Repo map (where things live)
 
