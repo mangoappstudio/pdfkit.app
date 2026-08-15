@@ -60,23 +60,23 @@ Notes:
 ## Cloudflare Pages
 
 The Cloudflare deployment is a static export. PDF processing remains entirely in
-the browser, and the standard `yarn build` / `yarn start` Node deployment stays
-available as a rollback path.
+the browser. Pushes to `main` are automatically built with Node.js 22 and
+deployed to the `pdfkit-app` Cloudflare Pages project by GitHub Actions.
 
 ```bash
 yarn build:cloudflare
 yarn preview:cloudflare
 ```
 
-After authenticating Wrangler and creating the `pdfkit-app` Pages project, deploy
-with:
+For a manual deployment from an authenticated development environment, run:
 
 ```bash
 yarn deploy:cloudflare
 ```
 
-Cloudflare Pages serves the generated `out/` directory. Dashboard builds should
-use `yarn build:cloudflare` as the build command and `out` as the output directory.
+Cloudflare Pages serves the generated `out/` directory. The standard `yarn build`
+and `yarn start` commands remain available for local production testing or
+self-hosting.
 
 ## Tools
 
