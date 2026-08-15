@@ -57,6 +57,27 @@ Notes:
 - If you deploy under a custom domain, update `lib/site.ts` (`SITE_URL`, etc.) so canonical URLs/metadata match your host.
 - Ensure `public/pdf.worker.min.mjs` exists in your deployment (it is created by the `postinstall` script).
 
+## Cloudflare Pages
+
+The Cloudflare deployment is a static export. PDF processing remains entirely in
+the browser, and the standard `yarn build` / `yarn start` Node deployment stays
+available as a rollback path.
+
+```bash
+yarn build:cloudflare
+yarn preview:cloudflare
+```
+
+After authenticating Wrangler and creating the `pdfkit-app` Pages project, deploy
+with:
+
+```bash
+yarn deploy:cloudflare
+```
+
+Cloudflare Pages serves the generated `out/` directory. Dashboard builds should
+use `yarn build:cloudflare` as the build command and `out` as the output directory.
+
 ## Tools
 
 | Tool | Route | Description |
