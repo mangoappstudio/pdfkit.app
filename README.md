@@ -60,8 +60,9 @@ Notes:
 ## Cloudflare Pages
 
 The Cloudflare deployment is a static export. PDF processing remains entirely in
-the browser. Pushes to `main` are automatically built with Node.js 22 and
-deployed to the `pdfkit-app` Cloudflare Pages project by GitHub Actions.
+the browser. Cloudflare Pages is connected directly to this repository: pull
+requests receive preview builds, and pushes to `main` are automatically built
+with Node.js 22 and deployed to the `pdfkit-app` project.
 
 ```bash
 yarn build:cloudflare
