@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { createPageMetadata } from "@/lib/metadata";
 import { UnlockPDFClient } from "./client";
 import { StructuredData } from "@/components/structured-data";
 import { ToolSeoFooter } from "@/components/tool-seo-footer";
@@ -7,13 +8,13 @@ import { toolSeo } from "@/lib/tool-seo";
 
 const seo = toolSeo["/unlock-pdf"];
 
-export const metadata: Metadata = {
+export const metadata: Metadata = createPageMetadata({
   title: "Unlock PDF",
   description: "Remove password protection from a PDF (when you know the password). Processed entirely in your browser.",
   alternates: {
     canonical: "/unlock-pdf",
   },
-};
+});
 
 export default function UnlockPDFPage() {
   const url = `${SITE_URL}${seo.path}`;
@@ -35,6 +36,7 @@ export default function UnlockPDFPage() {
         description: metadata.description,
         applicationCategory: "UtilitiesApplication",
         operatingSystem: "Web",
+        offers: { "@type": "Offer", price: 0 },
       },
     ],
   } as const;

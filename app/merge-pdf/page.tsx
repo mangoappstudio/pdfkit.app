@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { createPageMetadata } from "@/lib/metadata";
 import { MergePDFClient } from "./client";
 import { StructuredData } from "@/components/structured-data";
 import { ToolSeoFooter } from "@/components/tool-seo-footer";
@@ -7,13 +8,13 @@ import { toolSeo } from "@/lib/tool-seo";
 
 const seo = toolSeo["/merge-pdf"];
 
-export const metadata: Metadata = {
+export const metadata: Metadata = createPageMetadata({
   title: "Merge PDF",
   description: "Combine multiple PDF files into one. Reorder files before merging. Processed entirely in your browser.",
   alternates: {
     canonical: "/merge-pdf",
   },
-};
+});
 
 export default function MergePDFPage() {
   const url = `${SITE_URL}${seo.path}`;
@@ -35,6 +36,7 @@ export default function MergePDFPage() {
         description: metadata.description,
         applicationCategory: "UtilitiesApplication",
         operatingSystem: "Web",
+        offers: { "@type": "Offer", price: 0 },
       },
     ],
   } as const;

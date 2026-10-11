@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { createPageMetadata } from "@/lib/metadata";
 import { PdfToImagesClient } from "./client";
 import { StructuredData } from "@/components/structured-data";
 import { ToolSeoFooter } from "@/components/tool-seo-footer";
@@ -7,13 +8,13 @@ import { toolSeo } from "@/lib/tool-seo";
 
 const seo = toolSeo["/pdf-to-images"];
 
-export const metadata: Metadata = {
+export const metadata: Metadata = createPageMetadata({
   title: "PDF to Images",
   description: "Export selected PDF pages as PNG or JPEG images. All processing in your browser.",
   alternates: {
     canonical: "/pdf-to-images",
   },
-};
+});
 
 export default function PdfToImagesPage() {
   const url = `${SITE_URL}${seo.path}`;
@@ -35,6 +36,7 @@ export default function PdfToImagesPage() {
         description: metadata.description,
         applicationCategory: "UtilitiesApplication",
         operatingSystem: "Web",
+        offers: { "@type": "Offer", price: 0 },
       },
     ],
   } as const;

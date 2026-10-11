@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { createPageMetadata } from "@/lib/metadata";
 import { ProtectPDFClient } from "./client";
 import { StructuredData } from "@/components/structured-data";
 import { ToolSeoFooter } from "@/components/tool-seo-footer";
@@ -7,13 +8,13 @@ import { toolSeo } from "@/lib/tool-seo";
 
 const seo = toolSeo["/protect-pdf"];
 
-export const metadata: Metadata = {
+export const metadata: Metadata = createPageMetadata({
   title: "Protect PDF",
   description: "Password-protect a PDF and optionally set permissions. Processed entirely in your browser.",
   alternates: {
     canonical: "/protect-pdf",
   },
-};
+});
 
 export default function ProtectPDFPage() {
   const url = `${SITE_URL}${seo.path}`;
@@ -35,6 +36,7 @@ export default function ProtectPDFPage() {
         description: metadata.description,
         applicationCategory: "UtilitiesApplication",
         operatingSystem: "Web",
+        offers: { "@type": "Offer", price: 0 },
       },
     ],
   } as const;

@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { createPageMetadata } from "@/lib/metadata";
 import { RemoveMetadataClient } from "./client";
 import { StructuredData } from "@/components/structured-data";
 import { ToolSeoFooter } from "@/components/tool-seo-footer";
@@ -7,13 +8,13 @@ import { toolSeo } from "@/lib/tool-seo";
 
 const seo = toolSeo["/remove-metadata"];
 
-export const metadata: Metadata = {
+export const metadata: Metadata = createPageMetadata({
   title: "Remove Metadata",
   description: "Deep scrub a PDF by rebuilding it locally in your browser to remove document metadata.",
   alternates: {
     canonical: "/remove-metadata",
   },
-};
+});
 
 export default function RemoveMetadataPage() {
   const url = `${SITE_URL}${seo.path}`;
@@ -35,6 +36,7 @@ export default function RemoveMetadataPage() {
         description: metadata.description,
         applicationCategory: "UtilitiesApplication",
         operatingSystem: "Web",
+        offers: { "@type": "Offer", price: 0 },
       },
     ],
   } as const;

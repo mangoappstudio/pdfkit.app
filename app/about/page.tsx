@@ -1,17 +1,18 @@
 import type { Metadata } from "next";
+import { createPageMetadata } from "@/lib/metadata";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { SiteNav } from "@/components/site-nav";
 import { StructuredData } from "@/components/structured-data";
 import { SITE_NAME, SITE_URL } from "@/lib/site";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = createPageMetadata({
   title: "About",
   description: "About PDFKit.app — a private PDF preparation tool.",
   alternates: {
     canonical: "/about",
   },
-};
+});
 
 export default function AboutPage() {
   const structuredData = {
