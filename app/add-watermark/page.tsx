@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { createPageMetadata } from "@/lib/metadata";
 import { AddWatermarkClient } from "./client";
 import { StructuredData } from "@/components/structured-data";
 import { ToolSeoFooter } from "@/components/tool-seo-footer";
@@ -7,13 +8,13 @@ import { toolSeo } from "@/lib/tool-seo";
 
 const seo = toolSeo["/add-watermark"];
 
-export const metadata: Metadata = {
+export const metadata: Metadata = createPageMetadata({
   title: "Add Watermark",
   description: "Add a customizable text watermark to every page of your PDF. All processing in your browser.",
   alternates: {
     canonical: "/add-watermark",
   },
-};
+});
 
 export default function AddWatermarkPage() {
   const url = `${SITE_URL}${seo.path}`;
@@ -35,6 +36,7 @@ export default function AddWatermarkPage() {
         description: metadata.description,
         applicationCategory: "UtilitiesApplication",
         operatingSystem: "Web",
+        offers: { "@type": "Offer", price: 0 },
       },
     ],
   } as const;

@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { createPageMetadata } from "@/lib/metadata";
 import { StructuredData } from "@/components/structured-data";
 import { ToolSeoFooter } from "@/components/tool-seo-footer";
 import { SITE_NAME, SITE_URL } from "@/lib/site";
@@ -7,14 +8,14 @@ import { EditPDFClient } from "./client";
 
 const seo = toolSeo["/edit-pdf"];
 
-export const metadata: Metadata = {
+export const metadata: Metadata = createPageMetadata({
   title: "Edit PDF",
   description:
     "Edit a PDF locally in your browser: add text, cover existing content, draw, and export an updated file. No uploads.",
   alternates: {
     canonical: "/edit-pdf",
   },
-};
+});
 
 export default function EditPDFPage() {
   const url = `${SITE_URL}${seo.path}`;
@@ -36,6 +37,7 @@ export default function EditPDFPage() {
         description: metadata.description,
         applicationCategory: "UtilitiesApplication",
         operatingSystem: "Web",
+        offers: { "@type": "Offer", price: 0 },
       },
     ],
   } as const;

@@ -14,6 +14,7 @@
     "deploy:cloudflare": "yarn build:cloudflare && wrangler pages deploy --branch main",
     "start": "next start",
     "lint": "eslint",
+    "test:seo": "node scripts/check-seo.mjs",
     "postinstall": "cp node_modules/pdfjs-dist/build/pdf.worker.min.mjs public/pdf.worker.min.mjs"
   },
   "dependencies": {

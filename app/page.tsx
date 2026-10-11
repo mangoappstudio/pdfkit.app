@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { createPageMetadata } from "@/lib/metadata";
 import Link from "next/link";
 import { StructuredData } from "@/components/structured-data";
 import { Button } from "@/components/ui/button";
@@ -29,11 +30,11 @@ import {
   PencilLine,
 } from "lucide-react";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = createPageMetadata({
   alternates: {
     canonical: "/",
   },
-};
+});
 
 const structuredData = {
   "@context": "https://schema.org",
@@ -54,6 +55,7 @@ const structuredData = {
       description: SITE_DESCRIPTION,
       applicationCategory: "UtilitiesApplication",
       operatingSystem: "Web",
+      offers: { "@type": "Offer", price: 0 },
       isPartOf: { "@id": `${SITE_URL}/#website` },
     },
   ],

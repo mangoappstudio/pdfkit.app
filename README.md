@@ -79,6 +79,15 @@ Cloudflare Pages serves the generated `out/` directory. The standard `yarn build
 and `yarn start` commands remain available for local production testing or
 self-hosting.
 
+## SEO validation
+
+Run `yarn build:cloudflare && yarn test:seo` to check the rendered metadata,
+structured data, and sitemap for every public page in the static export.
+For the Node build, run `yarn build && yarn test:seo .next/server/app`.
+The checks preserve truthful free pricing without adding ratings or reviews.
+Software-app rich results still require a genuine rating or review under
+[Google's requirements](https://developers.google.com/search/docs/appearance/structured-data/software-app).
+
 ## Tools
 
 | Tool | Route | Description |
