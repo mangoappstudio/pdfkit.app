@@ -1,0 +1,4 @@
+interface:
+  display_name: "Symphony Issue Planner"
+  short_description: "Create repo-aware issues and native Symphony epics"
+  default_prompt: "Use $symphony-plan-issues to turn this work into scoped GitHub issues using this repository’s workflow, labels, and validation requirements."
