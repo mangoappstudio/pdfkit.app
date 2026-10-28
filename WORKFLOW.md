@@ -85,96 +85,13 @@ hooks:
     pr_ref="${SYMPHONY_REVIEW_PR_NUMBER:-{{ issue.branch_name }}}"
     pr_json="$(gh pr view "$pr_ref" --json url,body,number,baseRefName,headRefName)"
     pr_url="$(printf '%s\n' "$pr_json" | jq -r '.url')"
-    if [ "${SYMPHONY_REVIEW_ENABLED:-1}" != "1" ]; then
-      echo "Symphony post-run AI code review is disabled; PR validation completed without running the repository review hook."
-      exit 0
-    fi
-
-    pr_number="$(printf '%s\n' "$pr_json" | jq -r '.number')"
-    pr_base_branch="$(printf '%s\n' "$pr_json" | jq -r '.baseRefName // empty')"
-    pr_head_branch="$(printf '%s\n' "$pr_json" | jq -r '.headRefName // empty')"
-    review_base_branch="${pr_base_branch:-$base_branch}"
-    review_fixed_point="origin/$review_base_branch"
-
-    echo "Preparing AI code review for PR #$pr_number against $review_fixed_point."
-    git fetch origin "$review_base_branch"
-    if ! git rev-parse --verify "$review_fixed_point" >/dev/null; then
-      echo "ERROR: unable to resolve review fixed point $review_fixed_point."
-      exit 1
-    fi
-
-    if git diff --quiet "$review_fixed_point"...HEAD; then
-      echo "No diff between $review_fixed_point and HEAD; skipping AI code review."
-      exit 0
-    fi
-
-    if [ -z "${SYMPHONY_REVIEW_PROMPT_PATH:-}" ] || [ ! -f "$SYMPHONY_REVIEW_PROMPT_PATH" ]; then
-      echo "ERROR: SYMPHONY_REVIEW_PROMPT_PATH was not provided or does not exist."
-      exit 1
-    fi
-
-    artifact_dir="${SYMPHONY_RUN_ARTIFACT_DIR:-.symphony}"
-    mkdir -p "$artifact_dir"
-    review_output="$artifact_dir/code-review.md"
-    review_log="$artifact_dir/code-review.jsonl"
-
-    set +e
-    codex exec --json -s read-only -C . --output-last-message "$review_output" - < "$SYMPHONY_REVIEW_PROMPT_PATH" > "$review_log"
-    review_exit="$?"
-    set -e
-    cat "$review_log"
-    review_session_id="$(jq -r 'select(.type == "thread.started") | .thread_id // empty' "$review_log" 2>/dev/null | tail -n 1)"
-    if [ -z "$review_session_id" ]; then
-      review_session_id="review-$pr_number-$(date +%s)-$$"
-    fi
-    printf 'SYMPHONY_REVIEWER: %s\n' "$(jq -cn --arg execution_id "$review_session_id" --arg lens "${SYMPHONY_REVIEW_LENS:-staff-engineer}" '{execution_id:$execution_id,provider:"codex",model:null,lens:$lens}')"
-
-    if [ "$review_exit" -ne 0 ]; then
-      echo "ERROR: AI code review failed with exit code $review_exit."
-      exit "$review_exit"
-    fi
-
-    review_result="$(sed -n 's/^SYMPHONY_REVIEW_RESULT: //p' "$review_output" | tail -n 1)"
-    if [ -z "$review_result" ] || ! printf '%s\n' "$review_result" | jq -e '(.verdict == "pass" or .verdict == "block" or .verdict == "retry") and (.summary | type == "string") and (.findings | type == "array")' >/dev/null; then
-      echo "ERROR: AI code review did not include a valid SYMPHONY_REVIEW_RESULT payload."
-      exit 1
-    fi
-    review_verdict="$(printf '%s\n' "$review_result" | jq -r '.verdict')"
-
-    cat "$review_output"
-    originating_issue_number="${SYMPHONY_REVIEW_ISSUE_NUMBER:-{{ issue.number }}}"
-    review_marker="<!-- symphony-review:${SYMPHONY_REVIEW_EXECUTION_KEY:-${SYMPHONY_REVIEW_PR_HEAD_SHA:-unknown}:${SYMPHONY_REVIEW_PR_BASE_SHA:-unknown}:${SYMPHONY_REVIEW_LENS:-staff-engineer}} -->"
-    review_comment="$artifact_dir/code-review-comment.md"
-    {
-      echo "$review_marker"
-      cat "$review_output"
-    } > "$review_comment"
-    if ! gh pr view "$pr_number" --json comments --jq '.comments[].body' | grep -Fq -- "$review_marker"; then
-      gh pr comment "$pr_number" --body-file "$review_comment"
-    fi
-    if [ -n "$originating_issue_number" ] && [ "$originating_issue_number" != "$pr_number" ]; then
-      if ! gh issue view "$originating_issue_number" --json comments --jq '.comments[].body' | grep -Fq -- "$review_marker"; then
-        gh issue comment "$originating_issue_number" --body-file "$review_comment"
-      fi
-    fi
-
-    if [ "$review_verdict" = "retry" ]; then
-      echo "ERROR: AI code review requested a retry."
-      exit 1
-    fi
-
-    if [ "$review_verdict" = "block" ]; then
-      echo "ERROR: AI code review returned a blocking result."
-      exit 1
-    fi
-
-    echo "AI code review passed for $pr_url."
+    echo "PR finalization complete; code review is not required for this repository."
   timeout_ms: 1800000
 review:
-  enabled: true
-  auto_fix_review_comments: true
+  enabled: false
+  auto_fix_review_comments: false
   number_of_auto_fix_iterations: 1
-  shepherd_pull_requests: true
+  shepherd_pull_requests: false
   max_feedback_rounds: 3
   non_blocking_feedback_priorities:
     - p2
@@ -208,10 +125,27 @@ agents:
     - provider: codex
       default: true
 merge:
-  enabled: false
-  require_independent_reviews: true
+  enabled: true
+  require_independent_reviews: false
   require_checks: false
   method: squash
+  dry_run: false
+  required_reviews: 0
+  policy_version: pdfkit.app-validated-no-review-v1
+  required_evidence:
+    standard:
+      - validation
+    elevated:
+      - validation
+  validation_command: |
+    git diff --check
+    changed_paths="$(git diff --name-only "origin/${SYMPHONY_VALIDATION_BASE_REF:-main}"...HEAD)"
+    if grep -Ev '(^$|^docs/|\.md$|^LICENSE$|^LICENSE\.)' <<< "$changed_paths" >/dev/null; then
+      yarn install --frozen-lockfile
+      yarn lint
+      yarn test:seo
+      yarn build
+    fi
 ---
 
 You are working on a GitHub issue for PDFKit.app.
@@ -276,4 +210,6 @@ Expected tooling:
 
 Do not close the issue unless the workflow explicitly says to.
 
-Do not merge or deploy automatically. Leave the reviewed PR for delivery under the repository's existing policy. Never run overlapping existing autopilot work or change its schedules.
+Symphony runs the configured local validation and automatically merges the PR after it passes. Do not merge from the coding agent or run a competing autopilot merge job. Do not change existing automation schedules.
+
+Delivery policy: code review is not required. Run relevant development checks, push the issue branch, and open a non-draft PR with Fixes #{{ issue.number }}. Symphony performs final local validation and merging. Do not claim a deployment or native release just because the PR merged. Pause with SYMPHONY_PAUSE when a product decision, unavailable device evidence, credentials, destructive data change, or another human decision prevents validation.
