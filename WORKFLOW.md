@@ -121,7 +121,7 @@ agents:
       provider_kind: codex
       command: bash -lc 'set -o pipefail; codex exec --json --dangerously-bypass-approvals-and-sandbox -C . --output-last-message "$SYMPHONY_LAST_MESSAGE_PATH" - < "{{ symphony.prompt_path }}"'
       resume_command: bash -lc 'set -o pipefail; codex exec resume --json --dangerously-bypass-approvals-and-sandbox --output-last-message "$SYMPHONY_LAST_MESSAGE_PATH" "{{ symphony.agent_thread_id }}" - < "{{ symphony.prompt_path }}"'
-      handoff_command: bash -lc 'set -o pipefail; codex exec --json -s read-only -C . --output-last-message "$SYMPHONY_LAST_MESSAGE_PATH" - < "{{ symphony.prompt_path }}"'
+      handoff_command: bash -lc 'set -o pipefail; codex exec --json -c default_permissions=symphony-readonly-network -c permissions.symphony-readonly-network.extends=:read-only -c permissions.symphony-readonly-network.network.enabled=true -c permissions.symphony-readonly-network.filesystem.:slash_tmp=write -c permissions.symphony-readonly-network.filesystem.:tmpdir=write -C . --output-last-message "$SYMPHONY_LAST_MESSAGE_PATH" - < "{{ symphony.prompt_path }}"'
       output_log: .symphony/codex.jsonl
       turn_timeout_ms: 3600000
       usage_limit_exit_codes:
