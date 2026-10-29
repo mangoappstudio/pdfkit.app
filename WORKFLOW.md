@@ -37,6 +37,16 @@ polling:
 workspace:
   root: ~/.symphony/workspaces/pdfkit.app
   clean_on_terminal: true
+  checkout:
+    kind: linked_worktree
+    source: .
+    base_branch: main
+  storage_maintenance:
+    enabled: true
+    interval_ms: 86400000
+    warm_pool_slots: 1
+    max_pool_slots: 4
+    max_cache_gib: 10
   strategy:
     implementation: pooled_isolated
     planning: durable_issue_workspace
@@ -46,22 +56,21 @@ workspace:
 hooks:
   after_create: |
     set -euo pipefail
-    git clone git@github.com:mangoappstudio/pdfkit.app.git .
-    mkdir -p .git/info
-    touch .git/info/exclude
-    grep -qxF '.symphony/' .git/info/exclude || echo '.symphony/' >> .git/info/exclude
+    # Symphony creates and owns the linked checkout before repository hooks run.
+    git rev-parse --show-toplevel >/dev/null
   before_run: |
     set -euo pipefail
 
     base_branch="${SYMPHONY_STACK_BASE_BRANCH:-main}"
     git fetch origin "$base_branch"
-    git checkout -B "$base_branch" "origin/$base_branch"
+    git checkout --detach "origin/$base_branch"
     git reset --hard "origin/$base_branch"
-    git clean -fdx -e .symphony/
+    git clean -fdx -e .symphony/ -e node_modules/ -e .next/ -e .turbo/ -e .gradle/ -e .kotlin/ -e .cxx/ -e .build/ -e build/ -e dist/ -e coverage/ -e DerivedData/ -e .swiftpm/ -e local.properties
 
-    mkdir -p .git/info
-    touch .git/info/exclude
-    grep -qxF '.symphony/' .git/info/exclude || echo '.symphony/' >> .git/info/exclude
+    exclude_file="$(git rev-parse --git-path info/exclude)"
+    mkdir -p "$(dirname "$exclude_file")"
+    touch "$exclude_file"
+    grep -qxF '.symphony/' "$exclude_file" || echo '.symphony/' >> "$exclude_file"
 
     if ! git config user.email >/dev/null; then git config user.email "symphony@localhost"; fi
     if ! git config user.name >/dev/null; then git config user.name "Symphony"; fi
@@ -141,7 +150,7 @@ merge:
     git diff --check
     changed_paths="$(git diff --name-only "origin/${SYMPHONY_VALIDATION_BASE_REF:-main}"...HEAD)"
     if grep -Ev '(^$|^docs/|\.md$|^LICENSE$|^LICENSE\.)' <<< "$changed_paths" >/dev/null; then
-      yarn install --frozen-lockfile
+      node "$SYMPHONY_DEPENDENCY_HELPER" -- yarn install --frozen-lockfile --non-interactive --prefer-offline
       yarn lint
       yarn test:seo
       yarn build
@@ -213,3 +222,5 @@ Do not close the issue unless the workflow explicitly says to.
 Symphony runs the configured local validation and automatically merges the PR after it passes. Do not merge from the coding agent or run a competing autopilot merge job. Do not change existing automation schedules.
 
 Delivery policy: code review is not required. Run relevant development checks, push the issue branch, and open a non-draft PR with Fixes #{{ issue.number }}. Symphony performs final local validation and merging. Do not claim a deployment or native release just because the PR merged. Pause with SYMPHONY_PAUSE when a product decision, unavailable device evidence, credentials, destructive data change, or another human decision prevents validation.
+
+For dependency installation, use the shared helper exposed in the agent environment: `node "$SYMPHONY_DEPENDENCY_HELPER" -- npm ci` or `node "$SYMPHONY_DEPENDENCY_HELPER" -- yarn install --frozen-lockfile --non-interactive --prefer-offline`, matching this repository's package manager. It reuses a validated install and reruns when dependency inputs change. Preserve warm dependencies and caches; never share a mutable node_modules directory between concurrent workspaces.
