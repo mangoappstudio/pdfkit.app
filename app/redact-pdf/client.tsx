@@ -255,7 +255,7 @@ export function RedactPDFClient() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [boxes, currentPage, activeBoxId]);
 
-  function getCanvasCoords(e: React.MouseEvent<HTMLCanvasElement>): { x: number; y: number } {
+  function getCanvasCoords(e: React.PointerEvent<HTMLCanvasElement>): { x: number; y: number } {
     const rect = overlayRef.current!.getBoundingClientRect();
     const scaleX = overlayRef.current!.width / rect.width;
     const scaleY = overlayRef.current!.height / rect.height;
@@ -298,7 +298,9 @@ export function RedactPDFClient() {
     return null;
   }
 
-  function handleMouseDown(e: React.MouseEvent<HTMLCanvasElement>) {
+  function handlePointerDown(e: React.PointerEvent<HTMLCanvasElement>) {
+    if (!e.isPrimary || e.button !== 0 || isRendering || isProcessing || isInspecting) return;
+    e.currentTarget.setPointerCapture(e.pointerId);
     const { x, y } = getCanvasCoords(e);
     const pageBoxes = boxes.filter((b) => b.pageIndex === currentPage);
     for (let i = pageBoxes.length - 1; i >= 0; i--) {
@@ -329,7 +331,8 @@ export function RedactPDFClient() {
     setDrawRect({ startX: x, startY: y, endX: x, endY: y });
   }
 
-  function handleMouseMove(e: React.MouseEvent<HTMLCanvasElement>) {
+  function handlePointerMove(e: React.PointerEvent<HTMLCanvasElement>) {
+    if (!e.isPrimary) return;
     if (!interaction) return;
     const { x, y } = getCanvasCoords(e);
 
@@ -415,7 +418,8 @@ export function RedactPDFClient() {
     }
   }
 
-  function handleMouseUp(e: React.MouseEvent<HTMLCanvasElement>) {
+  function handlePointerUp(e: React.PointerEvent<HTMLCanvasElement>) {
+    if (!e.isPrimary) return;
     if (!interaction) return;
     if (interaction.type !== "draw" || !drawRect) {
       setInteraction(null);
@@ -500,11 +504,11 @@ export function RedactPDFClient() {
         boxesByPage.set(b.pageIndex, list);
       });
 
+      await ensurePdfWorker();
+
       const pdfjsLib = await import("pdfjs-dist");
       pdfjsLib.GlobalWorkerOptions.workerSrc = "/pdf.worker.min.mjs";
       const pdfjsDoc = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
-
-      await ensurePdfWorker();
 
       const rasterScale = 2;
       for (let pageIndex = 0; pageIndex < pageCount; pageIndex++) {
@@ -777,32 +781,32 @@ export function RedactPDFClient() {
                     </div>
                   </div>
 
-                  <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-                    <div className="flex items-center gap-2">
-                      <Button
-                        size="sm"
                   {!flattenExport && (
                     <p role="status" className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
                       Overlay only covers content; the original text may remain recoverable. Use Flattened to remove sensitive content before sharing.
                     </p>
                   )}
 
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+                    <div className="flex items-center gap-2">
+                      <Button
+                        size="sm"
                         variant="outline"
+                        aria-label="Zoom out"
                         onClick={() => setZoom((z) => Math.max(0.5, Math.round((z - 0.1) * 10) / 10))}
                         disabled={zoom <= 0.5}
                       >
                         <ZoomOut className="w-4 h-4" />
-                        aria-label="Zoom out"
                       </Button>
                       <span className="text-sm text-gray-600 w-16 text-center">{Math.round(zoom * 100)}%</span>
                       <Button
                         size="sm"
                         variant="outline"
+                        aria-label="Zoom in"
                         onClick={() => setZoom((z) => Math.min(3, Math.round((z + 0.1) * 10) / 10))}
                         disabled={zoom >= 3}
                       >
                         <ZoomIn className="w-4 h-4" />
-                        aria-label="Zoom in"
                       </Button>
                     </div>
                     <div className="flex-1">
@@ -855,15 +859,12 @@ export function RedactPDFClient() {
                     {/* Drawing overlay canvas */}
                     <canvas
                       ref={overlayRef}
-                      className="absolute inset-0 cursor-crosshair"
-                      onMouseDown={handleMouseDown}
-                      onMouseMove={handleMouseMove}
-                      onMouseUp={handleMouseUp}
-                      onMouseLeave={(e) => {
-                        if (interaction && interaction.type === "draw") handleMouseUp(e);
-                        setInteraction(null);
-                        setDrawRect(null);
-                      }}
+                      className="absolute inset-0 cursor-crosshair touch-none"
+                      onPointerDown={handlePointerDown}
+                      onPointerMove={handlePointerMove}
+                      onPointerUp={handlePointerUp}
+                      onPointerCancel={() => { setInteraction(null); setDrawRect(null); drawOverlay(); }}
+                      onLostPointerCapture={() => { setInteraction(null); setDrawRect(null); }}
                     />
                   </div>
                 </div>

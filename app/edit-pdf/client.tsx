@@ -227,7 +227,7 @@ export function EditPDFClient() {
 
   const currentPageEdits = useMemo(() => edits.filter((e) => e.pageIndex === currentPage), [edits, currentPage]);
 
-  function getCanvasCoords(e: React.MouseEvent<HTMLCanvasElement>): { x: number; y: number } {
+  function getCanvasCoords(e: React.PointerEvent<HTMLCanvasElement>): { x: number; y: number } {
     const rect = overlayRef.current!.getBoundingClientRect();
     const scaleX = overlayRef.current!.width / rect.width;
     const scaleY = overlayRef.current!.height / rect.height;
@@ -503,7 +503,9 @@ export function EditPDFClient() {
     [mode, edits, currentPage]
   );
 
-  function handleMouseDown(e: React.MouseEvent<HTMLCanvasElement>) {
+  function handlePointerDown(e: React.PointerEvent<HTMLCanvasElement>) {
+    if (!e.isPrimary || e.button !== 0 || isRendering || isExporting || isInspecting) return;
+    e.currentTarget.setPointerCapture(e.pointerId);
     if (mode === "editText") return; // handled by text layer clicks
     const { x, y } = getCanvasCoords(e);
 
@@ -557,7 +559,8 @@ export function EditPDFClient() {
     }
   }
 
-  function handleMouseMove(e: React.MouseEvent<HTMLCanvasElement>) {
+  function handlePointerMove(e: React.PointerEvent<HTMLCanvasElement>) {
+    if (!e.isPrimary) return;
     if (!interaction) return;
     const { x, y } = getCanvasCoords(e);
 
@@ -653,7 +656,8 @@ export function EditPDFClient() {
     }
   }
 
-  function handleMouseUp(e: React.MouseEvent<HTMLCanvasElement>) {
+  function handlePointerUp(e: React.PointerEvent<HTMLCanvasElement>) {
+    if (!e.isPrimary) return;
     if (!interaction) return;
     const { x, y } = getCanvasCoords(e);
 
@@ -662,6 +666,7 @@ export function EditPDFClient() {
       setInteraction(null);
       if (rect.w < 4 || rect.h < 4) return;
 
+      pushUndo(edits);
       const pdf = canvasRectToPdfRect(rect);
       const id = generateId();
       if (mode === "whiteout") {
@@ -1117,11 +1122,13 @@ export function EditPDFClient() {
                   />
                   <canvas
                     ref={overlayRef}
-                    className="absolute inset-0"
+                    className="absolute inset-0 touch-none"
                     style={{ cursor: mode === "select" ? "default" : "crosshair", pointerEvents: mode === "editText" ? "none" : "auto" }}
-                    onMouseDown={handleMouseDown}
-                    onMouseMove={handleMouseMove}
-                    onMouseUp={handleMouseUp}
+                    onPointerDown={handlePointerDown}
+                    onPointerMove={handlePointerMove}
+                    onPointerUp={handlePointerUp}
+                    onPointerCancel={() => { setInteraction(null); drawOverlay(); }}
+                    onLostPointerCapture={() => setInteraction(null)}
                   />
                 </div>
               </div>
