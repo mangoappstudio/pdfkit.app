@@ -189,7 +189,7 @@ export function MergePDFClient() {
     setIsProcessing(true);
     try {
       const merged = await mergePDFs(files.map((f) => f.file));
-      const name = `${(outputName.trim() || "merged").replace(/\\.pdf$/i, "")}.pdf`;
+      const name = `${(outputName.trim() || "merged").replace(/\.pdf$/i, "")}.pdf`;
       downloadFile(merged, name);
       toast.success("PDFs merged and downloaded!");
     } catch (err) {

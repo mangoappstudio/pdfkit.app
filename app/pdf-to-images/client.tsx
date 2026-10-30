@@ -86,7 +86,7 @@ export function PdfToImagesClient() {
       pdfDoc = await (pdfjsLib.getDocument({ data: arrayBuffer }).promise as Promise<PDFDocumentProxy>);
 
       const zip = new JSZip();
-      const digits = String(selectedIndices.length).length;
+      const digits = String(pageCount).length;
       const ext = format === "png" ? "png" : "jpg";
 
       for (let i = 0; i < selectedIndices.length; i++) {
@@ -112,7 +112,7 @@ export function PdfToImagesClient() {
           );
         });
 
-        const name = `page-${String(i + 1).padStart(digits, "0")}.${ext}`;
+        const name = `page-${String(pageIndex + 1).padStart(digits, "0")}.${ext}`;
         zip.file(name, blob);
         setRenderedCount(i + 1);
         await new Promise((r) => setTimeout(r, 0));

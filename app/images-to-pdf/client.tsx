@@ -105,7 +105,7 @@ export function ImagesToPDFClient() {
         jpegQuality: optimize ? jpegQuality : undefined,
         rotations: images.map((i) => i.rotation),
       });
-      const name = `${(outputName.trim() || "images").replace(/\\.pdf$/i, "")}.pdf`;
+      const name = `${(outputName.trim() || "images").replace(/\.pdf$/i, "")}.pdf`;
       downloadFile(bytes, name);
       toast.success("PDF created and downloaded!");
     } catch (err) {
