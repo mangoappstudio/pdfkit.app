@@ -1,5 +1,7 @@
 "use client";
 
+import { ensurePdfWorker } from "@/lib/pdf-worker";
+
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { PDFDocumentProxy } from "pdfjs-dist";
 
@@ -17,6 +19,9 @@ export function usePdfThumbnails(
   const [urls, setUrls] = useState<(string | null)[]>([]);
   const [isRendering, setIsRendering] = useState(false);
   const [renderedCount, setRenderedCount] = useState(0);
+  const [error, setError] = useState<string | null>(null);
+  const [attempt, setAttempt] = useState(0);
+  const retry = useCallback(() => setAttempt((n) => n + 1), []);
 
   const urlsRef = useRef<string[]>([]);
   const generationIdRef = useRef(0);
@@ -32,6 +37,7 @@ export function usePdfThumbnails(
     setUrls([]);
     setRenderedCount(0);
     setIsRendering(false);
+    setError(null);
   }, [revokeAll]);
 
   useEffect(() => {
@@ -50,9 +56,12 @@ export function usePdfThumbnails(
       setUrls(Array.from({ length: pageCountForThumbs }, () => null));
       setRenderedCount(0);
       setIsRendering(true);
+      setError(null);
+      revokeAll();
 
       let pdfDoc: PDFDocumentProxy | null = null;
       try {
+        await ensurePdfWorker();
         const pdfjsLib = await import("pdfjs-dist");
         pdfjsLib.GlobalWorkerOptions.workerSrc = "/pdf.worker.min.mjs";
 
@@ -100,7 +109,9 @@ export function usePdfThumbnails(
           }
         }
       } catch {
-        // Callers can display their own error UI; keep this hook silent.
+        if (!cancelled && generationId === generationIdRef.current) {
+          setError("Page previews could not be loaded. Retry, or use page numbers where available.");
+        }
       } finally {
         try {
           await pdfDoc?.destroy?.();
@@ -116,7 +127,7 @@ export function usePdfThumbnails(
       cancelled = true;
       revokeAll();
     };
-  }, [file, pageCount, width, maxScale, yieldEvery, reset, revokeAll]);
+  }, [file, pageCount, width, maxScale, yieldEvery, reset, revokeAll, attempt]);
 
-  return { urls, isRendering, renderedCount, reset };
+  return { urls, isRendering, renderedCount, reset, error, retry };
 }

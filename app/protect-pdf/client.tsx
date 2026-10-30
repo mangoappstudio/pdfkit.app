@@ -4,6 +4,7 @@ import { useCallback, useMemo, useState } from "react";
 import { FileText, Loader2, Lock } from "lucide-react";
 import { toast } from "sonner";
 import { ToolLayout } from "@/components/tool-layout";
+import { ToolWorkspace } from "@/components/tool-workspace";
 import { DropZone } from "@/components/drop-zone";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -166,7 +167,7 @@ export function ProtectPDFClient() {
       title="Protect PDF"
       description="Add password protection and optional permissions to a PDF."
     >
-      <div className="space-y-6">
+      <ToolWorkspace busy={isProcessing || isInspecting} status={isInspecting ? "Reading PDF… Please wait." : undefined} className="space-y-6">
         {!file ? (
           <DropZone
             onDrop={handleDrop}
@@ -325,7 +326,7 @@ export function ProtectPDFClient() {
             )}
           </Button>
         </div>
-      </div>
+      </ToolWorkspace>
     </ToolLayout>
   );
 }

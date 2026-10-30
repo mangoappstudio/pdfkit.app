@@ -5,6 +5,7 @@ import { FileCode2, FileText, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { PDFDocument } from "pdf-lib";
 import { ToolLayout } from "@/components/tool-layout";
+import { ToolWorkspace } from "@/components/tool-workspace";
 import { DropZone } from "@/components/drop-zone";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -259,7 +260,7 @@ export function HtmlToPDFClient() {
       title="HTML to PDF"
       description="Convert HTML code or an HTML file to PDF. Output is rasterized (screenshot-style)."
     >
-      <div className="space-y-6">
+      <ToolWorkspace busy={isProcessing} className="space-y-6">
         <div className="flex flex-wrap gap-2">
           <Button
             type="button"
@@ -283,7 +284,7 @@ export function HtmlToPDFClient() {
               <FileCode2 className="w-4 h-4 text-gray-600" />
               <h2 className="text-sm font-semibold text-gray-800">HTML code</h2>
             </div>
-            <textarea
+            <textarea aria-label="HTML code"
               className="w-full min-h-[220px] rounded-lg border border-gray-200 bg-white p-3 text-sm font-mono"
               value={htmlCode}
               onChange={(e) => setHtmlCode(e.target.value)}
@@ -386,7 +387,7 @@ export function HtmlToPDFClient() {
             )}
           </Button>
         </div>
-      </div>
+      </ToolWorkspace>
     </ToolLayout>
   );
 }

@@ -1,11 +1,14 @@
 "use client";
 
+import { ensurePdfWorker } from "@/lib/pdf-worker";
+
 import { useMemo, useState, useCallback } from "react";
 import type { PDFDocumentProxy } from "pdfjs-dist";
 import { FileScan, FileText, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { PDFDocument } from "pdf-lib";
 import { ToolLayout } from "@/components/tool-layout";
+import { ToolWorkspace } from "@/components/tool-workspace";
 import { DropZone } from "@/components/drop-zone";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
@@ -28,6 +31,7 @@ export function CompressPdfClient() {
   const [pageCount, setPageCount] = useState(0);
   const [preset, setPreset] = useState<PresetKey>("balanced");
   const [isProcessing, setIsProcessing] = useState(false);
+  const [isInspecting, setIsInspecting] = useState(false);
   const [processedPages, setProcessedPages] = useState(0);
 
   const presetInfo = PRESETS[preset];
@@ -40,6 +44,8 @@ export function CompressPdfClient() {
   const handleDrop = useCallback(async (files: File[]) => {
     const f = files[0];
     if (!f) return;
+    setIsInspecting(true);
+    setPageCount(0);
     setFile(f);
     setProcessedPages(0);
     try {
@@ -49,6 +55,8 @@ export function CompressPdfClient() {
       toast.error("Could not read this PDF. It may be corrupted or password-protected.");
       setFile(null);
       setPageCount(0);
+    } finally {
+      setIsInspecting(false);
     }
   }, []);
 
@@ -59,6 +67,7 @@ export function CompressPdfClient() {
 
     let pdfDoc: PDFDocumentProxy | null = null;
     try {
+      await ensurePdfWorker();
       const pdfjsLib = (await import("pdfjs-dist")) as PdfJsModule;
       pdfjsLib.GlobalWorkerOptions.workerSrc = "/pdf.worker.min.mjs";
 
@@ -129,7 +138,7 @@ export function CompressPdfClient() {
       title="Compress PDF"
       description="Best for scanned PDFs. Output is image-based — text won’t be selectable or searchable."
     >
-      <div className="space-y-6">
+      <ToolWorkspace busy={isProcessing || isInspecting} status={isInspecting ? "Reading PDF… Please wait." : undefined} className="space-y-6">
         {!file ? (
           <DropZone
             onDrop={handleDrop}
@@ -143,7 +152,7 @@ export function CompressPdfClient() {
             <FileText className="w-5 h-5 text-gray-400" />
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium text-gray-800 truncate">{file.name}</p>
-              <p className="text-xs text-gray-400">{pageCount} pages</p>
+              <p className="text-xs text-gray-400">{pageCount} page{pageCount === 1 ? "" : "s"}</p>
             </div>
             <button
               className="text-xs text-gray-400 hover:text-red-500 transition-colors shrink-0"
@@ -218,7 +227,7 @@ export function CompressPdfClient() {
             </Button>
           </div>
         )}
-      </div>
+      </ToolWorkspace>
     </ToolLayout>
   );
 }

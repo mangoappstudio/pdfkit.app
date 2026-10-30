@@ -1,5 +1,7 @@
 "use client";
 
+import { ensurePdfWorker } from "@/lib/pdf-worker";
+
 import { useMemo, useState, useCallback, useRef, useEffect } from "react";
 import { PDFDocument } from "pdf-lib";
 import type { PDFDocumentProxy } from "pdfjs-dist";
@@ -19,12 +21,14 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { ToolLayout } from "@/components/tool-layout";
+import { ToolWorkspace } from "@/components/tool-workspace";
 import { DropZone } from "@/components/drop-zone";
 import { Button } from "@/components/ui/button";
 import { redactPDF, getPDFPageCount, type RedactionBox } from "@/lib/pdf-utils";
 import { downloadFile } from "@/lib/download";
 import { PDF_ACCEPT } from "@/lib/file-utils";
 import { Slider } from "@/components/ui/slider";
+import { PreviewFeedback } from "@/components/preview-feedback";
 import { usePdfThumbnails } from "@/components/use-pdf-thumbnails";
 import { generateId } from "@/lib/file-utils";
 
@@ -66,6 +70,7 @@ export function RedactPDFClient() {
   const [currentPage, setCurrentPage] = useState(0);
   const [boxes, setBoxes] = useState<UiRedactionBox[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [isInspecting, setIsInspecting] = useState(false);
   const [isRendering, setIsRendering] = useState(false);
   const [flattenExport, setFlattenExport] = useState(true);
 
@@ -94,6 +99,8 @@ export function RedactPDFClient() {
   const handleDrop = useCallback(async (files: File[]) => {
     const f = files[0];
     if (!f) return;
+    setIsInspecting(true);
+    setPageCount(0);
     setFile(f);
     setBoxes([]);
     setCurrentPage(0);
@@ -110,10 +117,12 @@ export function RedactPDFClient() {
       toast.error("Could not read this PDF. It may be corrupted or password-protected.");
       setFile(null);
       setPageCount(0);
+    } finally {
+      setIsInspecting(false);
     }
   }, []);
 
-  const { urls: thumbUrls, isRendering: isRenderingThumbs, renderedCount: thumbsRendered, reset: resetThumbs } =
+  const { urls: thumbUrls, isRendering: isRenderingThumbs, renderedCount: thumbsRendered, reset: resetThumbs, error: thumbnailError, retry: retryThumbnails } =
     usePdfThumbnails(file, pageCount, { width: 120, maxScale: 1, yieldEvery: 2 });
 
   function pushUndo(snapshot: UiRedactionBox[]) {
@@ -135,6 +144,7 @@ export function RedactPDFClient() {
     async function render() {
       let pdfDoc: PDFDocumentProxy | null = null;
       try {
+        await ensurePdfWorker();
         const pdfjsLib = await import("pdfjs-dist");
         pdfjsLib.GlobalWorkerOptions.workerSrc = "/pdf.worker.min.mjs";
 
@@ -250,8 +260,8 @@ export function RedactPDFClient() {
     const scaleX = overlayRef.current!.width / rect.width;
     const scaleY = overlayRef.current!.height / rect.height;
     return {
-      x: (e.clientX - rect.left) * scaleX,
-      y: (e.clientY - rect.top) * scaleY,
+      x: Math.max(0, Math.min(overlayRef.current!.width, (e.clientX - rect.left) * scaleX)),
+      y: Math.max(0, Math.min(overlayRef.current!.height, (e.clientY - rect.top) * scaleY)),
     };
   }
 
@@ -494,6 +504,8 @@ export function RedactPDFClient() {
       pdfjsLib.GlobalWorkerOptions.workerSrc = "/pdf.worker.min.mjs";
       const pdfjsDoc = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
 
+      await ensurePdfWorker();
+
       const rasterScale = 2;
       for (let pageIndex = 0; pageIndex < pageCount; pageIndex++) {
         const pageBoxes = boxesByPage.get(pageIndex);
@@ -609,7 +621,8 @@ export function RedactPDFClient() {
       title="Redact PDF"
       description="Draw over sensitive areas to redact them before sharing. Black boxes are applied locally in your browser."
     >
-      <div className="space-y-6">
+      <ToolWorkspace busy={isProcessing || isInspecting} status={isInspecting ? "Reading PDF… Please wait." : undefined} className="space-y-6">
+        <PreviewFeedback error={thumbnailError} onRetry={retryThumbnails} />
         {!file ? (
           <>
             <DropZone
@@ -634,7 +647,7 @@ export function RedactPDFClient() {
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium text-gray-800 truncate">{file.name}</p>
                 <p className="text-xs text-gray-400">
-                  {pageCount} pages · {totalBoxes} redaction{totalBoxes !== 1 ? "s" : ""} applied
+                  {pageCount} page{pageCount === 1 ? "" : "s"} · {totalBoxes} redaction{totalBoxes !== 1 ? "s" : ""} applied
                 </p>
               </div>
               <button
@@ -768,11 +781,18 @@ export function RedactPDFClient() {
                     <div className="flex items-center gap-2">
                       <Button
                         size="sm"
+                  {!flattenExport && (
+                    <p role="status" className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
+                      Overlay only covers content; the original text may remain recoverable. Use Flattened to remove sensitive content before sharing.
+                    </p>
+                  )}
+
                         variant="outline"
                         onClick={() => setZoom((z) => Math.max(0.5, Math.round((z - 0.1) * 10) / 10))}
                         disabled={zoom <= 0.5}
                       >
                         <ZoomOut className="w-4 h-4" />
+                        aria-label="Zoom out"
                       </Button>
                       <span className="text-sm text-gray-600 w-16 text-center">{Math.round(zoom * 100)}%</span>
                       <Button
@@ -782,10 +802,11 @@ export function RedactPDFClient() {
                         disabled={zoom >= 3}
                       >
                         <ZoomIn className="w-4 h-4" />
+                        aria-label="Zoom in"
                       </Button>
                     </div>
                     <div className="flex-1">
-                      <Slider min={0.5} max={3} step={0.1} value={[zoom]} onValueChange={([v]) => setZoom(v)} />
+                      <Slider aria-label="Zoom" min={0.5} max={3} step={0.1} value={[zoom]} onValueChange={([v]) => setZoom(v)} />
                     </div>
                     <div className="flex items-center gap-2 justify-end">
                       <button
@@ -870,7 +891,7 @@ export function RedactPDFClient() {
             </div>
           </>
         )}
-      </div>
+      </ToolWorkspace>
     </ToolLayout>
   );
 }

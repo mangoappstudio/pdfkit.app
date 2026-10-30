@@ -4,6 +4,7 @@ import { useMemo, useState, useCallback } from "react";
 import { FileText, Hash } from "lucide-react";
 import { toast } from "sonner";
 import { ToolLayout } from "@/components/tool-layout";
+import { ToolWorkspace } from "@/components/tool-workspace";
 import { DropZone } from "@/components/drop-zone";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,6 +12,7 @@ import { Label } from "@/components/ui/label";
 import { addPageNumbers, getPDFPageCount, type AddPageNumbersFormat, type AddPageNumbersPosition } from "@/lib/pdf-utils";
 import { downloadFile } from "@/lib/download";
 import { PDF_ACCEPT } from "@/lib/file-utils";
+import { PreviewFeedback } from "@/components/preview-feedback";
 import { usePdfThumbnails } from "@/components/use-pdf-thumbnails";
 import { usePageSelection } from "@/components/use-page-selection";
 import { PageThumbnailGrid } from "@/components/page-thumbnail-grid";
@@ -43,16 +45,19 @@ export function AddPageNumbersClient() {
   const [margin, setMargin] = useState(24);
   const [color255, setColor255] = useState({ r: 51, g: 51, b: 51 });
   const [isProcessing, setIsProcessing] = useState(false);
+  const [isInspecting, setIsInspecting] = useState(false);
 
   const selection = usePageSelection(pageCount);
 
-  const { urls: thumbUrls, isRendering: isRenderingThumbs, renderedCount: thumbsRendered, reset: resetThumbs } =
+  const { urls: thumbUrls, isRendering: isRenderingThumbs, renderedCount: thumbsRendered, reset: resetThumbs, error: thumbnailError, retry: retryThumbnails } =
     usePdfThumbnails(file, pageCount, { width: 160, maxScale: 1, yieldEvery: 1 });
 
   const handleDrop = useCallback(
     async (files: File[]) => {
       const f = files[0];
       if (!f) return;
+      setIsInspecting(true);
+      setPageCount(0);
       resetThumbs();
       setFile(f);
       selection.reset();
@@ -63,6 +68,8 @@ export function AddPageNumbersClient() {
         toast.error("Could not read this PDF. It may be corrupted or password-protected.");
         setFile(null);
         setPageCount(0);
+      } finally {
+        setIsInspecting(false);
       }
     },
     [resetThumbs, selection]
@@ -115,7 +122,8 @@ export function AddPageNumbersClient() {
       title="Add Page Numbers"
       description="Add simple page numbers to your PDF — all locally in your browser."
     >
-      <div className="space-y-6">
+      <ToolWorkspace busy={isProcessing || isInspecting} status={isInspecting ? "Reading PDF… Please wait." : undefined} className="space-y-6">
+        <PreviewFeedback error={thumbnailError} onRetry={retryThumbnails} />
         {!file ? (
           <DropZone
             onDrop={handleDrop}
@@ -128,7 +136,7 @@ export function AddPageNumbersClient() {
             <FileText className="w-5 h-5 text-gray-400" />
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium text-gray-800 truncate">{file.name}</p>
-              <p className="text-xs text-gray-400">{pageCount} pages</p>
+              <p className="text-xs text-gray-400">{pageCount} page{pageCount === 1 ? "" : "s"}</p>
             </div>
             <button
               className="text-xs text-gray-400 hover:text-red-500 transition-colors shrink-0"
@@ -151,8 +159,8 @@ export function AddPageNumbersClient() {
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label>Apply to</Label>
-                <select
+                <Label htmlFor="page-numbers-apply-to">Apply to</Label>
+                <select id="page-numbers-apply-to"
                   value={applyTo}
                   onChange={(e) => setApplyTo(e.target.value as ApplyTo)}
                   className="w-full rounded-md border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700"
@@ -169,8 +177,8 @@ export function AddPageNumbersClient() {
               </div>
 
               <div className="space-y-2">
-                <Label>Format</Label>
-                <select
+                <Label htmlFor="page-numbers-format">Format</Label>
+                <select id="page-numbers-format"
                   value={format}
                   onChange={(e) => setFormat(e.target.value as AddPageNumbersFormat)}
                   className="w-full rounded-md border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700"
@@ -185,8 +193,8 @@ export function AddPageNumbersClient() {
               </div>
 
               <div className="space-y-2">
-                <Label>Start number</Label>
-                <Input
+                <Label htmlFor="page-numbers-start-number">Start number</Label>
+                <Input id="page-numbers-start-number"
                   type="number"
                   value={startNumber}
                   onChange={(e) => setStartNumber(parseInt(e.target.value || "1", 10))}
@@ -196,8 +204,8 @@ export function AddPageNumbersClient() {
               </div>
 
               <div className="space-y-2">
-                <Label>Position</Label>
-                <select
+                <Label htmlFor="page-numbers-position">Position</Label>
+                <select id="page-numbers-position"
                   value={position}
                   onChange={(e) => setPosition(e.target.value as AddPageNumbersPosition)}
                   className="w-full rounded-md border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700"
@@ -212,8 +220,8 @@ export function AddPageNumbersClient() {
               </div>
 
               <div className="space-y-2">
-                <Label>Font size</Label>
-                <Input
+                <Label htmlFor="page-numbers-font-size">Font size</Label>
+                <Input id="page-numbers-font-size"
                   type="number"
                   value={fontSize}
                   onChange={(e) => setFontSize(parseInt(e.target.value || "11", 10))}
@@ -224,8 +232,8 @@ export function AddPageNumbersClient() {
               </div>
 
               <div className="space-y-2">
-                <Label>Margin (pt)</Label>
-                <Input
+                <Label htmlFor="page-numbers-margin">Margin (pt)</Label>
+                <Input id="page-numbers-margin"
                   type="number"
                   value={margin}
                   onChange={(e) => setMargin(parseInt(e.target.value || "24", 10))}
@@ -236,9 +244,9 @@ export function AddPageNumbersClient() {
             </div>
 
             <div className="space-y-2">
-              <Label>Color (RGB)</Label>
+              <Label htmlFor="page-numbers-red">Color (RGB)</Label>
               <div className="grid grid-cols-3 gap-3 max-w-sm">
-                <Input
+                <Input aria-label="Red" id="page-numbers-red"
                   type="number"
                   value={color255.r}
                   onChange={(e) => setColor255((prev) => ({ ...prev, r: clamp255(parseInt(e.target.value || "0", 10)) }))}
@@ -246,7 +254,7 @@ export function AddPageNumbersClient() {
                   max={255}
                   disabled={isProcessing}
                 />
-                <Input
+                <Input aria-label="Green"
                   type="number"
                   value={color255.g}
                   onChange={(e) => setColor255((prev) => ({ ...prev, g: clamp255(parseInt(e.target.value || "0", 10)) }))}
@@ -254,7 +262,7 @@ export function AddPageNumbersClient() {
                   max={255}
                   disabled={isProcessing}
                 />
-                <Input
+                <Input aria-label="Blue"
                   type="number"
                   value={color255.b}
                   onChange={(e) => setColor255((prev) => ({ ...prev, b: clamp255(parseInt(e.target.value || "0", 10)) }))}
@@ -304,7 +312,8 @@ export function AddPageNumbersClient() {
 
                 <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
                   <Input
-                    value={selection.rangeInput}
+                    aria-label="Page range"
+                value={selection.rangeInput}
                     onChange={(e) => selection.setRangeInput(e.target.value)}
                     placeholder="Page range (e.g. 1-3,5,8-10)"
                     className="sm:max-w-sm"
@@ -358,7 +367,7 @@ export function AddPageNumbersClient() {
             </Button>
           </div>
         )}
-      </div>
+      </ToolWorkspace>
     </ToolLayout>
   );
 }

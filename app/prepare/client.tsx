@@ -4,6 +4,7 @@ import { useState, useCallback } from "react";
 import { Package, FileText } from "lucide-react";
 import { toast } from "sonner";
 import { ToolLayout } from "@/components/tool-layout";
+import { ToolWorkspace } from "@/components/tool-workspace";
 import { DropZone } from "@/components/drop-zone";
 import { FileList } from "@/components/file-list";
 import { Button } from "@/components/ui/button";
@@ -35,7 +36,7 @@ const ACCEPT = {
 };
 
 async function fileToMergeable(file: File): Promise<File> {
-  if (file.type === "application/pdf") return file;
+  if (file.type === "application/pdf" || /\.pdf$/i.test(file.name)) return file;
   // Convert image to PDF first
   const bytes = await imagesToPDF([file]);
   return new File([bytes.buffer as ArrayBuffer], file.name.replace(/\.[^.]+$/, ".pdf"), {
@@ -147,7 +148,7 @@ export function PrepareClient() {
       title="Document Packet Builder"
       description="Add, organize, and export multiple files as one clean PDF packet — locally in your browser."
     >
-      <div className="space-y-8">
+      <ToolWorkspace busy={isProcessing} className="space-y-8">
         {/* Step indicator */}
         <div className="flex items-center gap-2">
           {steps.map((s, idx) => (
@@ -445,7 +446,7 @@ export function PrepareClient() {
             </div>
           </div>
         )}
-      </div>
+      </ToolWorkspace>
     </ToolLayout>
   );
 }

@@ -4,6 +4,7 @@ import { useState, useCallback } from "react";
 import { ImagePlus, RotateCw } from "lucide-react";
 import { toast } from "sonner";
 import { ToolLayout } from "@/components/tool-layout";
+import { ToolWorkspace } from "@/components/tool-workspace";
 import { DropZone } from "@/components/drop-zone";
 import { FileList } from "@/components/file-list";
 import { Button } from "@/components/ui/button";
@@ -39,12 +40,7 @@ export function ImagesToPDFClient() {
   const [previewUrls, setPreviewUrls] = useState<Record<string, string>>({});
 
   const handleDrop = useCallback((files: File[]) => {
-    const validTypes = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
-    const valid = files.filter((f) => validTypes.includes(f.type.toLowerCase()));
-    if (valid.length < files.length) {
-      toast.error("Some files were skipped — only JPG, PNG, and WebP images are supported.");
-    }
-    const newItems = valid.map((file) => ({ id: generateId(), file, rotation: 0 }));
+    const newItems = files.map((file) => ({ id: generateId(), file, rotation: 0 }));
     setImages((prev) => [...prev, ...newItems]);
     setPreviewUrls((prev) => {
       const next = { ...prev };
@@ -121,7 +117,7 @@ export function ImagesToPDFClient() {
       title="Images to PDF"
       description="Upload images, reorder them, choose a page size, and export as a PDF."
     >
-      <div className="space-y-5">
+      <ToolWorkspace busy={isProcessing} className="space-y-5">
         <DropZone
           onDrop={handleDrop}
           accept={IMAGE_ACCEPT}
@@ -214,10 +210,10 @@ export function ImagesToPDFClient() {
 
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <Label>Margins</Label>
+              <Label id="image-margins">Margins</Label>
               <span className="text-sm text-gray-500">{margin}pt</span>
             </div>
-            <Slider min={0} max={72} step={2} value={[margin]} onValueChange={([v]) => setMargin(v)} />
+            <Slider aria-labelledby="image-margins" min={0} max={72} step={2} value={[margin]} onValueChange={([v]) => setMargin(v)} />
             <p className="text-xs text-gray-400">
               Applies when using A4/Letter. Ignored for “Fit to image”.
             </p>
@@ -277,7 +273,7 @@ export function ImagesToPDFClient() {
                   <span className="text-sm text-gray-600">JPEG quality</span>
                   <span className="text-sm text-gray-500">{Math.round(jpegQuality * 100)}%</span>
                 </div>
-                <Slider
+                <Slider aria-label="JPEG quality"
                   min={0.5}
                   max={0.95}
                   step={0.05}
@@ -308,7 +304,7 @@ export function ImagesToPDFClient() {
             {isProcessing ? "Converting…" : "Convert to PDF"}
           </Button>
         </div>
-      </div>
+      </ToolWorkspace>
     </ToolLayout>
   );
 }

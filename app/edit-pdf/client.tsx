@@ -1,5 +1,8 @@
 "use client";
 
+import { ensurePdfWorker } from "@/lib/pdf-worker";
+
+import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { PDFDocumentProxy } from "pdfjs-dist";
 import { PDFDocument, PDFFont, StandardFonts, rgb } from "pdf-lib";
@@ -21,11 +24,13 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { ToolLayout } from "@/components/tool-layout";
+import { ToolWorkspace } from "@/components/tool-workspace";
 import { DropZone } from "@/components/drop-zone";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
+import { PreviewFeedback } from "@/components/preview-feedback";
 import { usePdfThumbnails } from "@/components/use-pdf-thumbnails";
 import { downloadFile } from "@/lib/download";
 import { generateId, PDF_ACCEPT } from "@/lib/file-utils";
@@ -147,6 +152,7 @@ export function EditPDFClient() {
   const [interaction, setInteraction] = useState<Interaction>(null);
   const [isRendering, setIsRendering] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
+  const [isInspecting, setIsInspecting] = useState(false);
   const [undoDepth, setUndoDepth] = useState(0);
   const [redoDepth, setRedoDepth] = useState(0);
 
@@ -177,12 +183,14 @@ export function EditPDFClient() {
   const canUndo = undoDepth > 0;
   const canRedo = redoDepth > 0;
 
-  const { urls: thumbUrls, isRendering: isRenderingThumbs, renderedCount: thumbsRendered, reset: resetThumbs } =
+  const { urls: thumbUrls, isRendering: isRenderingThumbs, renderedCount: thumbsRendered, reset: resetThumbs, error: thumbnailError, retry: retryThumbnails } =
     usePdfThumbnails(file, pageCount, { width: 120, maxScale: 1, yieldEvery: 2 });
 
   const handleDrop = useCallback(async (files: File[]) => {
     const f = files[0];
     if (!f) return;
+    setIsInspecting(true);
+    setPageCount(0);
     setFile(f);
     setEdits([]);
     setActiveEditId(null);
@@ -197,6 +205,7 @@ export function EditPDFClient() {
     resetThumbs();
 
     try {
+      await ensurePdfWorker();
       const pdfjsLib = await import("pdfjs-dist");
       pdfjsLib.GlobalWorkerOptions.workerSrc = "/pdf.worker.min.mjs";
       const arrayBuffer = await f.arrayBuffer();
@@ -211,6 +220,8 @@ export function EditPDFClient() {
       toast.error("Could not read this PDF. It may be corrupted or password-protected.");
       setFile(null);
       setPageCount(0);
+    } finally {
+      setIsInspecting(false);
     }
   }, [resetThumbs]);
 
@@ -221,8 +232,8 @@ export function EditPDFClient() {
     const scaleX = overlayRef.current!.width / rect.width;
     const scaleY = overlayRef.current!.height / rect.height;
     return {
-      x: (e.clientX - rect.left) * scaleX,
-      y: (e.clientY - rect.top) * scaleY,
+      x: Math.max(0, Math.min(overlayRef.current!.width, (e.clientX - rect.left) * scaleX)),
+      y: Math.max(0, Math.min(overlayRef.current!.height, (e.clientY - rect.top) * scaleY)),
     };
   }
 
@@ -368,6 +379,7 @@ export function EditPDFClient() {
     async function render() {
       let pdfDoc: PDFDocumentProxy | null = null;
       try {
+        await ensurePdfWorker();
         const pdfjsLib = await import("pdfjs-dist");
         pdfjsLib.GlobalWorkerOptions.workerSrc = "/pdf.worker.min.mjs";
 
@@ -834,9 +846,10 @@ export function EditPDFClient() {
   return (
     <ToolLayout
       title="Edit PDF"
-      description="Sejda-style editing is hard to do 100% faithfully without a full PDF engine. This tool keeps everything local by applying edits as overlays (cover + redraw) and exporting a new PDF."
+      description="Add text, cover areas, or draw on a PDF, then download your edited copy."
     >
-      <div className="space-y-6">
+      <ToolWorkspace busy={isExporting || isInspecting} status={isInspecting ? "Reading PDF… Please wait." : undefined} className="space-y-6">
+        <PreviewFeedback error={thumbnailError} onRetry={retryThumbnails} />
         {!file ? (
           <DropZone onDrop={handleDrop} accept={PDF_ACCEPT} multiple={false} label="Drop a PDF here or click to browse" />
         ) : (
@@ -994,11 +1007,11 @@ export function EditPDFClient() {
                   <span className="text-xs text-gray-400">{Math.round(zoom * 100)}%</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <Button variant="outline" size="icon" onClick={() => setZoom((z) => clamp(Number((z / 1.25).toFixed(3)), 0.25, 4))}>
+                  <Button variant="outline" size="icon" aria-label="Zoom out" onClick={() => setZoom((z) => clamp(Number((z / 1.25).toFixed(3)), 0.25, 4))}>
                     <ZoomOut className="w-4 h-4" />
                   </Button>
-                  <Slider value={[zoom]} min={0.5} max={2.5} step={0.05} onValueChange={(v) => setZoom(v[0] ?? 1)} />
-                  <Button variant="outline" size="icon" onClick={() => setZoom((z) => clamp(Number((z * 1.25).toFixed(3)), 0.25, 4))}>
+                  <Slider aria-label="Zoom" value={[zoom]} min={0.5} max={2.5} step={0.05} onValueChange={(v) => setZoom(v[0] ?? 1)} />
+                  <Button variant="outline" size="icon" aria-label="Zoom in" onClick={() => setZoom((z) => clamp(Number((z * 1.25).toFixed(3)), 0.25, 4))}>
                     <ZoomIn className="w-4 h-4" />
                   </Button>
                 </div>
@@ -1114,13 +1127,13 @@ export function EditPDFClient() {
               </div>
 
               <p className="mt-3 text-xs text-gray-400">
-                Notes: This editor currently supports overlay edits (whiteout, new text, and drawing). True in-place PDF
-                content editing is not reliably possible with lightweight OSS libraries.
+                Edits are overlays: covered content remains in the PDF. To remove sensitive information before sharing, use{" "}
+                <Link href="/redact-pdf" className="text-blue-600 underline">Redact PDF</Link> with flattened export.
               </p>
             </div>
           </div>
         )}
-      </div>
+      </ToolWorkspace>
     </ToolLayout>
   );
 }
