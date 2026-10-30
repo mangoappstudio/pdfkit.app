@@ -4,12 +4,14 @@ import { useState, useCallback } from "react";
 import { FileOutput, FileText } from "lucide-react";
 import { toast } from "sonner";
 import { ToolLayout } from "@/components/tool-layout";
+import { ToolWorkspace } from "@/components/tool-workspace";
 import { DropZone } from "@/components/drop-zone";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { extractPages, getPDFPageCount } from "@/lib/pdf-utils";
 import { downloadFile } from "@/lib/download";
 import { PDF_ACCEPT } from "@/lib/file-utils";
+import { PreviewFeedback } from "@/components/preview-feedback";
 import { usePdfThumbnails } from "@/components/use-pdf-thumbnails";
 import { usePageSelection } from "@/components/use-page-selection";
 import { PageThumbnailGrid } from "@/components/page-thumbnail-grid";
@@ -18,6 +20,7 @@ export function ExtractPagesClient() {
   const [file, setFile] = useState<File | null>(null);
   const [pageCount, setPageCount] = useState(0);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [isInspecting, setIsInspecting] = useState(false);
 
   const selection = usePageSelection(pageCount);
   const {
@@ -25,11 +28,14 @@ export function ExtractPagesClient() {
     isRendering: isRenderingThumbs,
     renderedCount: thumbsRendered,
     reset: resetThumbs,
+    error: thumbnailError, retry: retryThumbnails,
   } = usePdfThumbnails(file, pageCount, { width: 160, maxScale: 1, yieldEvery: 1 });
 
   const handleDrop = useCallback(async (files: File[]) => {
     const f = files[0];
     if (!f) return;
+    setIsInspecting(true);
+    setPageCount(0);
     resetThumbs();
     setFile(f);
     selection.reset();
@@ -40,6 +46,8 @@ export function ExtractPagesClient() {
       toast.error("Could not read this PDF. It may be corrupted or password-protected.");
       setFile(null);
       setPageCount(0);
+    } finally {
+      setIsInspecting(false);
     }
   }, [resetThumbs, selection]);
 
@@ -64,7 +72,8 @@ export function ExtractPagesClient() {
       title="Extract Pages"
       description="Select the pages you want to keep and export them as a new PDF."
     >
-      <div className="space-y-6">
+      <ToolWorkspace busy={isProcessing || isInspecting} status={isInspecting ? "Reading PDF… Please wait." : undefined} className="space-y-6">
+        <PreviewFeedback error={thumbnailError} onRetry={retryThumbnails} />
         {!file ? (
           <DropZone
             onDrop={handleDrop}
@@ -77,7 +86,7 @@ export function ExtractPagesClient() {
             <FileText className="w-5 h-5 text-gray-400" />
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium text-gray-800 truncate">{file.name}</p>
-              <p className="text-xs text-gray-400">{pageCount} pages</p>
+              <p className="text-xs text-gray-400">{pageCount} page{pageCount === 1 ? "" : "s"}</p>
             </div>
             <button
               className="text-xs text-gray-400 hover:text-red-500 transition-colors"
@@ -127,6 +136,7 @@ export function ExtractPagesClient() {
 
             <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
               <Input
+                aria-label="Page range"
                 value={selection.rangeInput}
                 onChange={(e) => selection.setRangeInput(e.target.value)}
                 placeholder="Page range (e.g. 1-3,5,8-10)"
@@ -182,7 +192,7 @@ export function ExtractPagesClient() {
             </div>
           </>
         )}
-      </div>
+      </ToolWorkspace>
     </ToolLayout>
   );
 }

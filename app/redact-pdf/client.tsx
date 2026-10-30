@@ -1,5 +1,7 @@
 "use client";
 
+import { ensurePdfWorker } from "@/lib/pdf-worker";
+
 import { useMemo, useState, useCallback, useRef, useEffect } from "react";
 import { PDFDocument } from "pdf-lib";
 import type { PDFDocumentProxy } from "pdfjs-dist";
@@ -19,12 +21,14 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { ToolLayout } from "@/components/tool-layout";
+import { ToolWorkspace } from "@/components/tool-workspace";
 import { DropZone } from "@/components/drop-zone";
 import { Button } from "@/components/ui/button";
 import { redactPDF, getPDFPageCount, type RedactionBox } from "@/lib/pdf-utils";
 import { downloadFile } from "@/lib/download";
 import { PDF_ACCEPT } from "@/lib/file-utils";
 import { Slider } from "@/components/ui/slider";
+import { PreviewFeedback } from "@/components/preview-feedback";
 import { usePdfThumbnails } from "@/components/use-pdf-thumbnails";
 import { generateId } from "@/lib/file-utils";
 
@@ -66,6 +70,7 @@ export function RedactPDFClient() {
   const [currentPage, setCurrentPage] = useState(0);
   const [boxes, setBoxes] = useState<UiRedactionBox[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [isInspecting, setIsInspecting] = useState(false);
   const [isRendering, setIsRendering] = useState(false);
   const [flattenExport, setFlattenExport] = useState(true);
 
@@ -94,6 +99,8 @@ export function RedactPDFClient() {
   const handleDrop = useCallback(async (files: File[]) => {
     const f = files[0];
     if (!f) return;
+    setIsInspecting(true);
+    setPageCount(0);
     setFile(f);
     setBoxes([]);
     setCurrentPage(0);
@@ -110,10 +117,12 @@ export function RedactPDFClient() {
       toast.error("Could not read this PDF. It may be corrupted or password-protected.");
       setFile(null);
       setPageCount(0);
+    } finally {
+      setIsInspecting(false);
     }
   }, []);
 
-  const { urls: thumbUrls, isRendering: isRenderingThumbs, renderedCount: thumbsRendered, reset: resetThumbs } =
+  const { urls: thumbUrls, isRendering: isRenderingThumbs, renderedCount: thumbsRendered, reset: resetThumbs, error: thumbnailError, retry: retryThumbnails } =
     usePdfThumbnails(file, pageCount, { width: 120, maxScale: 1, yieldEvery: 2 });
 
   function pushUndo(snapshot: UiRedactionBox[]) {
@@ -135,6 +144,7 @@ export function RedactPDFClient() {
     async function render() {
       let pdfDoc: PDFDocumentProxy | null = null;
       try {
+        await ensurePdfWorker();
         const pdfjsLib = await import("pdfjs-dist");
         pdfjsLib.GlobalWorkerOptions.workerSrc = "/pdf.worker.min.mjs";
 
@@ -245,13 +255,13 @@ export function RedactPDFClient() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [boxes, currentPage, activeBoxId]);
 
-  function getCanvasCoords(e: React.MouseEvent<HTMLCanvasElement>): { x: number; y: number } {
+  function getCanvasCoords(e: React.PointerEvent<HTMLCanvasElement>): { x: number; y: number } {
     const rect = overlayRef.current!.getBoundingClientRect();
     const scaleX = overlayRef.current!.width / rect.width;
     const scaleY = overlayRef.current!.height / rect.height;
     return {
-      x: (e.clientX - rect.left) * scaleX,
-      y: (e.clientY - rect.top) * scaleY,
+      x: Math.max(0, Math.min(overlayRef.current!.width, (e.clientX - rect.left) * scaleX)),
+      y: Math.max(0, Math.min(overlayRef.current!.height, (e.clientY - rect.top) * scaleY)),
     };
   }
 
@@ -288,7 +298,9 @@ export function RedactPDFClient() {
     return null;
   }
 
-  function handleMouseDown(e: React.MouseEvent<HTMLCanvasElement>) {
+  function handlePointerDown(e: React.PointerEvent<HTMLCanvasElement>) {
+    if (!e.isPrimary || e.button !== 0 || isRendering || isProcessing || isInspecting) return;
+    e.currentTarget.setPointerCapture(e.pointerId);
     const { x, y } = getCanvasCoords(e);
     const pageBoxes = boxes.filter((b) => b.pageIndex === currentPage);
     for (let i = pageBoxes.length - 1; i >= 0; i--) {
@@ -319,7 +331,8 @@ export function RedactPDFClient() {
     setDrawRect({ startX: x, startY: y, endX: x, endY: y });
   }
 
-  function handleMouseMove(e: React.MouseEvent<HTMLCanvasElement>) {
+  function handlePointerMove(e: React.PointerEvent<HTMLCanvasElement>) {
+    if (!e.isPrimary) return;
     if (!interaction) return;
     const { x, y } = getCanvasCoords(e);
 
@@ -405,7 +418,8 @@ export function RedactPDFClient() {
     }
   }
 
-  function handleMouseUp(e: React.MouseEvent<HTMLCanvasElement>) {
+  function handlePointerUp(e: React.PointerEvent<HTMLCanvasElement>) {
+    if (!e.isPrimary) return;
     if (!interaction) return;
     if (interaction.type !== "draw" || !drawRect) {
       setInteraction(null);
@@ -489,6 +503,8 @@ export function RedactPDFClient() {
         list.push(b);
         boxesByPage.set(b.pageIndex, list);
       });
+
+      await ensurePdfWorker();
 
       const pdfjsLib = await import("pdfjs-dist");
       pdfjsLib.GlobalWorkerOptions.workerSrc = "/pdf.worker.min.mjs";
@@ -609,7 +625,8 @@ export function RedactPDFClient() {
       title="Redact PDF"
       description="Draw over sensitive areas to redact them before sharing. Black boxes are applied locally in your browser."
     >
-      <div className="space-y-6">
+      <ToolWorkspace busy={isProcessing || isInspecting} status={isInspecting ? "Reading PDF… Please wait." : undefined} className="space-y-6">
+        <PreviewFeedback error={thumbnailError} onRetry={retryThumbnails} />
         {!file ? (
           <>
             <DropZone
@@ -634,7 +651,7 @@ export function RedactPDFClient() {
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium text-gray-800 truncate">{file.name}</p>
                 <p className="text-xs text-gray-400">
-                  {pageCount} pages · {totalBoxes} redaction{totalBoxes !== 1 ? "s" : ""} applied
+                  {pageCount} page{pageCount === 1 ? "" : "s"} · {totalBoxes} redaction{totalBoxes !== 1 ? "s" : ""} applied
                 </p>
               </div>
               <button
@@ -764,11 +781,18 @@ export function RedactPDFClient() {
                     </div>
                   </div>
 
+                  {!flattenExport && (
+                    <p role="status" className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
+                      Overlay only covers content; the original text may remain recoverable. Use Flattened to remove sensitive content before sharing.
+                    </p>
+                  )}
+
                   <div className="flex flex-col sm:flex-row sm:items-center gap-3">
                     <div className="flex items-center gap-2">
                       <Button
                         size="sm"
                         variant="outline"
+                        aria-label="Zoom out"
                         onClick={() => setZoom((z) => Math.max(0.5, Math.round((z - 0.1) * 10) / 10))}
                         disabled={zoom <= 0.5}
                       >
@@ -778,6 +802,7 @@ export function RedactPDFClient() {
                       <Button
                         size="sm"
                         variant="outline"
+                        aria-label="Zoom in"
                         onClick={() => setZoom((z) => Math.min(3, Math.round((z + 0.1) * 10) / 10))}
                         disabled={zoom >= 3}
                       >
@@ -785,7 +810,7 @@ export function RedactPDFClient() {
                       </Button>
                     </div>
                     <div className="flex-1">
-                      <Slider min={0.5} max={3} step={0.1} value={[zoom]} onValueChange={([v]) => setZoom(v)} />
+                      <Slider aria-label="Zoom" min={0.5} max={3} step={0.1} value={[zoom]} onValueChange={([v]) => setZoom(v)} />
                     </div>
                     <div className="flex items-center gap-2 justify-end">
                       <button
@@ -834,15 +859,12 @@ export function RedactPDFClient() {
                     {/* Drawing overlay canvas */}
                     <canvas
                       ref={overlayRef}
-                      className="absolute inset-0 cursor-crosshair"
-                      onMouseDown={handleMouseDown}
-                      onMouseMove={handleMouseMove}
-                      onMouseUp={handleMouseUp}
-                      onMouseLeave={(e) => {
-                        if (interaction && interaction.type === "draw") handleMouseUp(e);
-                        setInteraction(null);
-                        setDrawRect(null);
-                      }}
+                      className="absolute inset-0 cursor-crosshair touch-none"
+                      onPointerDown={handlePointerDown}
+                      onPointerMove={handlePointerMove}
+                      onPointerUp={handlePointerUp}
+                      onPointerCancel={() => { setInteraction(null); setDrawRect(null); drawOverlay(); }}
+                      onLostPointerCapture={() => { setInteraction(null); setDrawRect(null); }}
                     />
                   </div>
                 </div>
@@ -870,7 +892,7 @@ export function RedactPDFClient() {
             </div>
           </>
         )}
-      </div>
+      </ToolWorkspace>
     </ToolLayout>
   );
 }

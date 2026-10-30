@@ -4,11 +4,13 @@ import { useMemo, useRef, useState, useCallback } from "react";
 import { ArrowUpDown, Check, GripVertical, RotateCw, Trash2, Undo2, FileText, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { ToolLayout } from "@/components/tool-layout";
+import { ToolWorkspace } from "@/components/tool-workspace";
 import { DropZone } from "@/components/drop-zone";
 import { Button } from "@/components/ui/button";
 import { reorderPages, getPDFPageCount } from "@/lib/pdf-utils";
 import { downloadFile } from "@/lib/download";
 import { PDF_ACCEPT } from "@/lib/file-utils";
+import { PreviewFeedback } from "@/components/preview-feedback";
 import { usePdfThumbnails } from "@/components/use-pdf-thumbnails";
 import {
   DndContext,
@@ -101,7 +103,8 @@ function PageThumbnail({
                 ? "bg-blue-600 border-blue-600 text-white"
                 : "bg-white/90 border-gray-200 text-gray-400 hover:text-gray-600"
             }`}
-            aria-label={selected ? "Deselect page" : "Select page"}
+            aria-label={`${selected ? "Deselect" : "Select"} page ${item.originalIndex + 1}`}
+            aria-pressed={selected}
           >
             {selected ? <Check className="w-4 h-4" aria-hidden="true" /> : <span className="w-2 h-2 rounded-full bg-current opacity-30" />}
           </button>
@@ -115,23 +118,23 @@ function PageThumbnail({
           </button>
         </div>
 
-        <div className="absolute bottom-1 right-1 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+        <div className="absolute bottom-1 right-1 flex gap-1 ">
           <button
             onClick={(e) => { e.stopPropagation(); onRotate(item.id); }}
             className="w-6 h-6 rounded bg-white border border-gray-200 flex items-center justify-center text-gray-500 hover:text-blue-600 hover:border-blue-300 transition-colors"
-            aria-label="Rotate page"
+            aria-label={`Rotate page ${item.originalIndex + 1}`}
           >
             <RotateCw className="w-3 h-3" />
           </button>
           <button
             onClick={(e) => { e.stopPropagation(); onDelete(item.id); }}
             className="w-6 h-6 rounded bg-white border border-gray-200 flex items-center justify-center text-gray-500 hover:text-red-600 hover:border-red-300 transition-colors"
-            aria-label="Delete page"
+            aria-label={`Delete page ${item.originalIndex + 1}`}
           >
             <Trash2 className="w-3 h-3" />
           </button>
         </div>
-        <span className="absolute bottom-1 left-2 text-xs text-gray-400 group-hover:hidden">
+        <span className="absolute bottom-1 left-2 text-xs text-gray-500">
           p. {item.originalIndex + 1}
         </span>
       </div>
@@ -144,6 +147,7 @@ export function ReorderPagesClient() {
   const [pages, setPages] = useState<PageItem[]>([]);
   const [originalPageCount, setOriginalPageCount] = useState(0);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [isInspecting, setIsInspecting] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [undoCount, setUndoCount] = useState(0);
   const lastClickedIndexRef = useRef<number | null>(null);
@@ -154,12 +158,15 @@ export function ReorderPagesClient() {
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
   );
 
-  const { urls: thumbUrls, isRendering: isRenderingThumbs, renderedCount: thumbsRendered, reset: resetThumbs } =
+  const { urls: thumbUrls, isRendering: isRenderingThumbs, renderedCount: thumbsRendered, reset: resetThumbs, error: thumbnailError, retry: retryThumbnails } =
     usePdfThumbnails(file, originalPageCount, { width: 160, maxScale: 1, yieldEvery: 1 });
 
   const handleDrop = useCallback(async (files: File[]) => {
     const f = files[0];
     if (!f) return;
+    setIsInspecting(true);
+    setOriginalPageCount(0);
+    setPages([]);
     resetThumbs();
     setFile(f);
     setSelectedIds(new Set());
@@ -180,6 +187,8 @@ export function ReorderPagesClient() {
       toast.error("Could not read this PDF. It may be corrupted or password-protected.");
       setFile(null);
       setOriginalPageCount(0);
+    } finally {
+      setIsInspecting(false);
     }
   }, [resetThumbs]);
 
@@ -196,8 +205,8 @@ export function ReorderPagesClient() {
   function handleDragEnd(event: DragEndEvent) {
     const { active, over } = event;
     if (over && active.id !== over.id) {
+      pushUndo(pages);
       setPages((prev) => {
-        pushUndo(prev);
         const oldIndex = prev.findIndex((p) => p.id === active.id);
         const newIndex = prev.findIndex((p) => p.id === over.id);
         const next = [...prev];
@@ -209,15 +218,15 @@ export function ReorderPagesClient() {
   }
 
   function handleRotate(id: string) {
+    pushUndo(pages);
     setPages((prev) => {
-      pushUndo(prev);
       return prev.map((p) => (p.id === id ? { ...p, rotation: (p.rotation + 90) % 360 } : p));
     });
   }
 
   function handleDelete(id: string) {
+    pushUndo(pages);
     setPages((prev) => {
-      pushUndo(prev);
       return prev.filter((p) => p.id !== id);
     });
     setSelectedIds((prev) => {
@@ -258,8 +267,8 @@ export function ReorderPagesClient() {
 
   function rotateSelected() {
     if (selectedIds.size === 0) return;
+    pushUndo(pages);
     setPages((prev) => {
-      pushUndo(prev);
       return prev.map((p) =>
         selectedIds.has(p.id) ? { ...p, rotation: (p.rotation + 90) % 360 } : p
       );
@@ -268,8 +277,8 @@ export function ReorderPagesClient() {
 
   function deleteSelected() {
     if (selectedIds.size === 0) return;
+    pushUndo(pages);
     setPages((prev) => {
-      pushUndo(prev);
       return prev.filter((p) => !selectedIds.has(p.id));
     });
     clearSelection();
@@ -305,7 +314,8 @@ export function ReorderPagesClient() {
       title="Reorder Pages"
       description="Drag pages to reorder them. Rotate or delete individual pages before exporting."
     >
-      <div className="space-y-6">
+      <ToolWorkspace busy={isProcessing || isInspecting} status={isInspecting ? "Reading PDF… Please wait." : undefined} className="space-y-6">
+        <PreviewFeedback error={thumbnailError} onRetry={retryThumbnails} />
         {!file ? (
           <DropZone
             onDrop={handleDrop}
@@ -340,7 +350,7 @@ export function ReorderPagesClient() {
           </div>
         )}
 
-        {pages.length > 0 && (
+        {file && originalPageCount > 0 && (
           <>
             <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
               <p className="text-xs text-gray-400">
@@ -401,7 +411,7 @@ export function ReorderPagesClient() {
             </div>
           </>
         )}
-      </div>
+      </ToolWorkspace>
     </ToolLayout>
   );
 }

@@ -1,10 +1,13 @@
 "use client";
 
+import { ensurePdfWorker } from "@/lib/pdf-worker";
+
 import { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import { FileStack, Loader2 } from "lucide-react";
 import type { PDFDocumentProxy } from "pdfjs-dist";
 import { toast } from "sonner";
 import { ToolLayout } from "@/components/tool-layout";
+import { ToolWorkspace } from "@/components/tool-workspace";
 import { DropZone } from "@/components/drop-zone";
 import { FileList } from "@/components/file-list";
 import { Button } from "@/components/ui/button";
@@ -28,16 +31,14 @@ export function MergePDFClient() {
   const [pageCounts, setPageCounts] = useState<Record<string, number>>({});
   const [thumbs, setThumbs] = useState<Record<string, string>>({});
   const [isRenderingPreviews, setIsRenderingPreviews] = useState(false);
+  const [previewFailures, setPreviewFailures] = useState<Record<string, boolean>>({});
+  const [previewAttempt, setPreviewAttempt] = useState(0);
   const prevIdsRef = useRef<Set<string>>(new Set());
 
   const handleDrop = useCallback((newFiles: File[]) => {
-    const validFiles = newFiles.filter((f) => f.type === "application/pdf");
-    if (validFiles.length < newFiles.length) {
-      toast.error("Some files were skipped — only PDF files are supported.");
-    }
     setFiles((prev) => [
       ...prev,
-      ...validFiles.map((file) => ({ id: generateId(), file })),
+      ...newFiles.map((file) => ({ id: generateId(), file })),
     ]);
   }, []);
 
@@ -106,7 +107,7 @@ export function MergePDFClient() {
               if (cancelled) return;
               setPageCounts((prev) => (prev[f.id] === undefined ? { ...prev, [f.id]: count } : prev));
             } catch {
-              // ignore per-file failure
+              if (!cancelled) setPageCounts((prev) => ({ ...prev, [f.id]: 0 }));
             }
           }
         }
@@ -129,6 +130,7 @@ export function MergePDFClient() {
     async function run() {
       setIsRenderingPreviews(true);
       try {
+        await ensurePdfWorker();
         const pdfjsLib = (await import("pdfjs-dist")) as PdfJsModule;
         pdfjsLib.GlobalWorkerOptions.workerSrc = "/pdf.worker.min.mjs";
 
@@ -162,7 +164,7 @@ export function MergePDFClient() {
             }
             setThumbs((prev) => (prev[f.id] ? prev : { ...prev, [f.id]: url }));
           } catch {
-            // ignore per-file failure
+            if (!cancelled) setPreviewFailures((prev) => ({ ...prev, [f.id]: true }));
           } finally {
             try {
               await pdfDoc?.destroy?.();
@@ -171,6 +173,8 @@ export function MergePDFClient() {
             }
           }
         }
+      } catch {
+        if (!cancelled) setPreviewFailures(Object.fromEntries(files.map((f) => [f.id, true])));
       } finally {
         if (!cancelled) setIsRenderingPreviews(false);
       }
@@ -182,14 +186,14 @@ export function MergePDFClient() {
       cancelled = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [files]);
+  }, [files, previewAttempt]);
 
   const handleMerge = async () => {
-    if (files.length < 2) return;
+    if (files.length < 2 || files.some((f) => !pageCounts[f.id])) return;
     setIsProcessing(true);
     try {
       const merged = await mergePDFs(files.map((f) => f.file));
-      const name = `${(outputName.trim() || "merged").replace(/\\.pdf$/i, "")}.pdf`;
+      const name = `${(outputName.trim() || "merged").replace(/\.pdf$/i, "")}.pdf`;
       downloadFile(merged, name);
       toast.success("PDFs merged and downloaded!");
     } catch (err) {
@@ -205,7 +209,7 @@ export function MergePDFClient() {
       title="Merge PDF"
       description="Combine multiple PDF files into one. Drag to reorder them before merging."
     >
-      <div className="space-y-5">
+      <ToolWorkspace busy={isProcessing} className="space-y-5">
         <DropZone
           onDrop={handleDrop}
           accept={PDF_ACCEPT}
@@ -243,6 +247,9 @@ export function MergePDFClient() {
                 Clear all
               </button>
             </div>
+            {files.some((f) => previewFailures[f.id]) && (
+              <Button variant="outline" size="sm" onClick={() => { setPreviewFailures({}); setPreviewAttempt((n) => n + 1); }}>Retry previews</Button>
+            )}
             <FileList
               items={files}
               onRemove={handleRemove}
@@ -264,8 +271,8 @@ export function MergePDFClient() {
               getTitle={(item) => item.file.name}
               getMeta={(item) => {
                 const pages = pageCounts[item.id];
-                const pagesLabel = pages ? `${pages} page${pages !== 1 ? "s" : ""}` : "Counting pages…";
-                return `${pagesLabel} · ${formatFileSize(item.file.size)}`;
+                const pagesLabel = pages === undefined ? "Counting pages…" : pages === 0 ? "Cannot read PDF. Remove it and try another file." : `${pages} page${pages !== 1 ? "s" : ""}`;
+                return `${pagesLabel} · ${formatFileSize(item.file.size)}${previewFailures[item.id] ? " · Preview unavailable" : ""}`;
               }}
             />
           </div>
@@ -281,7 +288,7 @@ export function MergePDFClient() {
           <div className="bg-white border border-gray-200 rounded-xl p-5 space-y-2">
             <p className="text-sm font-semibold text-gray-800">Output filename</p>
             <div className="flex items-center gap-2">
-              <Input value={outputName} onChange={(e) => setOutputName(e.target.value)} placeholder="merged" />
+              <Input aria-label="Output filename" value={outputName} onChange={(e) => setOutputName(e.target.value)} placeholder="merged" />
               <span className="text-sm text-gray-400 shrink-0">.pdf</span>
             </div>
           </div>
@@ -289,18 +296,18 @@ export function MergePDFClient() {
 
         <div className="flex items-center justify-between pt-2">
           <p className="text-xs text-gray-400">
-            {files.length < 2 ? `Need ${2 - files.length} more file${files.length === 1 ? "" : "s"}` : `Ready to merge ${files.length} files`}
+            {files.length < 2 ? `Need ${2 - files.length} more file${files.length === 1 ? "" : "s"}` : files.some((f) => pageCounts[f.id] === 0) ? "Remove unreadable PDFs to continue" : files.some((f) => pageCounts[f.id] === undefined) ? "Reading PDFs…" : `Ready to merge ${files.length} files`}
           </p>
           <Button
             onClick={handleMerge}
-            disabled={files.length < 2 || isProcessing}
+            disabled={files.length < 2 || isProcessing || files.some((f) => !pageCounts[f.id])}
             className="gap-2"
           >
             <FileStack className="w-4 h-4" />
             {isProcessing ? "Merging…" : "Merge PDFs"}
           </Button>
         </div>
-      </div>
+      </ToolWorkspace>
     </ToolLayout>
   );
 }

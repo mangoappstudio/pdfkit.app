@@ -1,11 +1,14 @@
 "use client";
 
+import { ensurePdfWorker } from "@/lib/pdf-worker";
+
 import { useMemo, useState, useCallback } from "react";
 import type { PDFDocumentProxy } from "pdfjs-dist";
 import { FileText, ImageDown, Loader2 } from "lucide-react";
 import JSZip from "jszip";
 import { toast } from "sonner";
 import { ToolLayout } from "@/components/tool-layout";
+import { ToolWorkspace } from "@/components/tool-workspace";
 import { DropZone } from "@/components/drop-zone";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,6 +18,7 @@ import { Progress } from "@/components/ui/progress";
 import { PDF_ACCEPT } from "@/lib/file-utils";
 import { downloadBlob } from "@/lib/download";
 import { getPDFPageCount } from "@/lib/pdf-utils";
+import { PreviewFeedback } from "@/components/preview-feedback";
 import { usePdfThumbnails } from "@/components/use-pdf-thumbnails";
 import { usePageSelection } from "@/components/use-page-selection";
 import { PageThumbnailGrid } from "@/components/page-thumbnail-grid";
@@ -31,18 +35,21 @@ export function PdfToImagesClient() {
   const [jpegQuality, setJpegQuality] = useState(0.85);
   const [scale, setScale] = useState<ScalePreset>(2);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [isInspecting, setIsInspecting] = useState(false);
   const [renderedCount, setRenderedCount] = useState(0);
   const [totalToRender, setTotalToRender] = useState(0);
 
   const selection = usePageSelection(pageCount);
 
-  const { urls: thumbUrls, isRendering: isRenderingThumbs, renderedCount: thumbsRendered, reset: resetThumbs } =
+  const { urls: thumbUrls, isRendering: isRenderingThumbs, renderedCount: thumbsRendered, reset: resetThumbs, error: thumbnailError, retry: retryThumbnails } =
     usePdfThumbnails(file, pageCount, { width: 160, maxScale: 1, yieldEvery: 1 });
 
   const handleDrop = useCallback(
     async (files: File[]) => {
       const f = files[0];
       if (!f) return;
+      setIsInspecting(true);
+      setPageCount(0);
       resetThumbs();
       setFile(f);
       selection.reset();
@@ -56,6 +63,8 @@ export function PdfToImagesClient() {
         toast.error("Could not read this PDF. It may be corrupted or password-protected.");
         setFile(null);
         setPageCount(0);
+      } finally {
+        setIsInspecting(false);
       }
     },
     [resetThumbs, selection]
@@ -79,6 +88,7 @@ export function PdfToImagesClient() {
 
     let pdfDoc: PDFDocumentProxy | null = null;
     try {
+      await ensurePdfWorker();
       const pdfjsLib = (await import("pdfjs-dist")) as PdfJsModule;
       pdfjsLib.GlobalWorkerOptions.workerSrc = "/pdf.worker.min.mjs";
 
@@ -86,7 +96,7 @@ export function PdfToImagesClient() {
       pdfDoc = await (pdfjsLib.getDocument({ data: arrayBuffer }).promise as Promise<PDFDocumentProxy>);
 
       const zip = new JSZip();
-      const digits = String(selectedIndices.length).length;
+      const digits = String(pageCount).length;
       const ext = format === "png" ? "png" : "jpg";
 
       for (let i = 0; i < selectedIndices.length; i++) {
@@ -112,7 +122,7 @@ export function PdfToImagesClient() {
           );
         });
 
-        const name = `page-${String(i + 1).padStart(digits, "0")}.${ext}`;
+        const name = `page-${String(pageIndex + 1).padStart(digits, "0")}.${ext}`;
         zip.file(name, blob);
         setRenderedCount(i + 1);
         await new Promise((r) => setTimeout(r, 0));
@@ -140,7 +150,8 @@ export function PdfToImagesClient() {
       title="PDF to Images"
       description="Export selected pages as PNG or JPEG images — all locally in your browser."
     >
-      <div className="space-y-6">
+      <ToolWorkspace busy={isProcessing || isInspecting} status={isInspecting ? "Reading PDF… Please wait." : undefined} className="space-y-6">
+        <PreviewFeedback error={thumbnailError} onRetry={retryThumbnails} />
         {!file ? (
           <DropZone
             onDrop={handleDrop}
@@ -154,7 +165,7 @@ export function PdfToImagesClient() {
             <FileText className="w-5 h-5 text-gray-400" />
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium text-gray-800 truncate">{file.name}</p>
-              <p className="text-xs text-gray-400">{pageCount} pages</p>
+              <p className="text-xs text-gray-400">{pageCount} page{pageCount === 1 ? "" : "s"}</p>
             </div>
             <button
               className="text-xs text-gray-400 hover:text-red-500 transition-colors shrink-0"
@@ -179,8 +190,8 @@ export function PdfToImagesClient() {
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div className="space-y-2">
-                <Label>Format</Label>
-                <select
+                <Label htmlFor="pdf-images-format">Format</Label>
+                <select id="pdf-images-format"
                   value={format}
                   onChange={(e) => setFormat(e.target.value as ImageFormat)}
                   className="w-full rounded-md border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700"
@@ -192,8 +203,8 @@ export function PdfToImagesClient() {
               </div>
 
               <div className="space-y-2">
-                <Label>Scale</Label>
-                <select
+                <Label htmlFor="pdf-images-scale">Scale</Label>
+                <select id="pdf-images-scale"
                   value={String(scale)}
                   onChange={(e) => setScale(parseInt(e.target.value, 10) as ScalePreset)}
                   className="w-full rounded-md border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700"
@@ -206,9 +217,9 @@ export function PdfToImagesClient() {
               </div>
 
               <div className="space-y-2">
-                <Label>JPEG quality</Label>
+                <Label id="pdf-images-quality">JPEG quality</Label>
                 <div className="flex items-center gap-3">
-                  <Slider
+                  <Slider aria-labelledby="pdf-images-quality"
                     value={[jpegQuality]}
                     onValueChange={(v) => setJpegQuality(v[0] ?? 0.85)}
                     min={0.1}
@@ -260,6 +271,7 @@ export function PdfToImagesClient() {
 
             <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
               <Input
+                aria-label="Page range"
                 value={selection.rangeInput}
                 onChange={(e) => selection.setRangeInput(e.target.value)}
                 placeholder="Page range (e.g. 1-3,5,8-10)"
@@ -329,7 +341,7 @@ export function PdfToImagesClient() {
             </div>
           </>
         )}
-      </div>
+      </ToolWorkspace>
     </ToolLayout>
   );
 }

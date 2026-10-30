@@ -5,6 +5,7 @@ import { Download, FileText, Scissors } from "lucide-react";
 import JSZip from "jszip";
 import { toast } from "sonner";
 import { ToolLayout } from "@/components/tool-layout";
+import { ToolWorkspace } from "@/components/tool-workspace";
 import { DropZone } from "@/components/drop-zone";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,6 +13,7 @@ import { Label } from "@/components/ui/label";
 import { splitPDFByRanges, splitPDFIntoPages, getPDFPageCount, parsePageRanges } from "@/lib/pdf-utils";
 import { downloadBlob, downloadFile } from "@/lib/download";
 import { PDF_ACCEPT } from "@/lib/file-utils";
+import { PreviewFeedback } from "@/components/preview-feedback";
 import { usePdfThumbnails } from "@/components/use-pdf-thumbnails";
 import { PageThumbnailGrid } from "@/components/page-thumbnail-grid";
 
@@ -23,16 +25,19 @@ export function SplitPDFClient() {
   const [mode, setMode] = useState<SplitMode>("ranges");
   const [rangeInput, setRangeInput] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
+  const [isInspecting, setIsInspecting] = useState(false);
   const [results, setResults] = useState<{ name: string; bytes: Uint8Array }[]>([]);
   const [showPreviews, setShowPreviews] = useState(true);
   const [rangeStart, setRangeStart] = useState<number | null>(null);
 
-  const { urls: thumbUrls, isRendering: isRenderingThumbs, renderedCount: thumbsRendered, reset: resetThumbs } =
+  const { urls: thumbUrls, isRendering: isRenderingThumbs, renderedCount: thumbsRendered, reset: resetThumbs, error: thumbnailError, retry: retryThumbnails } =
     usePdfThumbnails(file, pageCount, { width: 160, maxScale: 1, yieldEvery: 2 });
 
   const handleDrop = useCallback(async (files: File[]) => {
     const f = files[0];
     if (!f) return;
+    setIsInspecting(true);
+    setPageCount(0);
     resetThumbs();
     setFile(f);
     setResults([]);
@@ -45,6 +50,8 @@ export function SplitPDFClient() {
       toast.error("Could not read this PDF. It may be corrupted or password-protected.");
       setFile(null);
       setPageCount(0);
+    } finally {
+      setIsInspecting(false);
     }
   }, [resetThumbs]);
 
@@ -111,7 +118,7 @@ export function SplitPDFClient() {
           toast.error("Please enter page ranges.");
           return;
         }
-        const rangeGroups = rangeInput.split(";").map((s) => s.trim()).filter(Boolean);
+        const rangeGroups = rangeInput.split(";").map((s) => s.trim());
         const indexGroups = rangeGroups.map((group) => parsePageRanges(group, pageCount));
         const pdfs = await splitPDFByRanges(file, indexGroups);
         const baseName = file.name.replace(/\.pdf$/i, "");
@@ -140,7 +147,8 @@ export function SplitPDFClient() {
       title="Split PDF"
       description="Split a PDF by page ranges, or extract every page as a separate file."
     >
-      <div className="space-y-6">
+      <ToolWorkspace busy={isProcessing || isInspecting} status={isInspecting ? "Reading PDF… Please wait." : undefined} className="space-y-6">
+        <PreviewFeedback error={thumbnailError} onRetry={retryThumbnails} />
         {!file ? (
           <DropZone
             onDrop={handleDrop}
@@ -154,7 +162,7 @@ export function SplitPDFClient() {
             <FileText className="w-5 h-5 text-gray-400" />
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium text-gray-800 truncate">{file.name}</p>
-              <p className="text-xs text-gray-400">{pageCount} pages</p>
+              <p className="text-xs text-gray-400">{pageCount} page{pageCount === 1 ? "" : "s"}</p>
             </div>
             <button
               className="text-xs text-gray-400 hover:text-red-500 transition-colors shrink-0"
@@ -318,8 +326,8 @@ export function SplitPDFClient() {
             </div>
             <div className="flex flex-col gap-2">
               {results.map((result, i) => (
-                <div key={i} className="flex items-center justify-between bg-gray-50 rounded-lg px-3 py-2">
-                  <span className="text-sm text-gray-700">{result.name}</span>
+                <div key={i} className="flex min-w-0 items-center justify-between gap-3 bg-gray-50 rounded-lg px-3 py-2">
+                  <span className="min-w-0 break-all text-sm text-gray-700">{result.name}</span>
                   <Button
                     variant="outline"
                     size="sm"
@@ -332,7 +340,7 @@ export function SplitPDFClient() {
             </div>
           </div>
         )}
-      </div>
+      </ToolWorkspace>
     </ToolLayout>
   );
 }

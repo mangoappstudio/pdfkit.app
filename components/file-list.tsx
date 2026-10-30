@@ -76,8 +76,8 @@ function SortableItem({
       <button
         {...attributes}
         {...listeners}
-        className="text-gray-400 hover:text-gray-600 cursor-grab active:cursor-grabbing touch-none"
-        aria-label="Drag to reorder"
+        className="p-2 shrink-0 text-gray-500 hover:text-gray-600 cursor-grab active:cursor-grabbing touch-none"
+        aria-label={`Reorder ${item.file.name}`}
       >
         <GripVertical className="w-4 h-4" />
       </button>
@@ -91,14 +91,14 @@ function SortableItem({
         {meta && <span className="block text-xs text-gray-400 truncate">{meta}</span>}
       </div>
       {renderActions && (
-        <span className="shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+        <span className="shrink-0">
           {renderActions(item)}
         </span>
       )}
       <Button
         variant="ghost"
         size="icon"
-        className="h-6 w-6 text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
+        className="h-8 w-8 shrink-0 text-gray-500 hover:text-red-500"
         onClick={() => onRemove(item.id)}
         aria-label={`Remove ${item.file.name}`}
       >

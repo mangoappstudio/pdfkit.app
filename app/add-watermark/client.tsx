@@ -1,9 +1,13 @@
 "use client";
 
+import { ensurePdfWorker } from "@/lib/pdf-worker";
+
+import type { PDFDocumentProxy } from "pdfjs-dist";
 import { useEffect, useRef, useState, useCallback } from "react";
 import { FileText, Loader2, Stamp } from "lucide-react";
 import { toast } from "sonner";
 import { ToolLayout } from "@/components/tool-layout";
+import { ToolWorkspace } from "@/components/tool-workspace";
 import { DropZone } from "@/components/drop-zone";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -25,6 +29,7 @@ export function AddWatermarkClient() {
   const [position, setPosition] = useState<"center" | "top-left" | "top-right" | "bottom-left" | "bottom-right">("center");
   const [tiled, setTiled] = useState(true);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [isInspecting, setIsInspecting] = useState(false);
   const [isRenderingPreview, setIsRenderingPreview] = useState(false);
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -34,6 +39,8 @@ export function AddWatermarkClient() {
   const handleDrop = useCallback(async (files: File[]) => {
     const f = files[0];
     if (!f) return;
+    setIsInspecting(true);
+    setPageCount(0);
     setFile(f);
     setPageRange("");
     try {
@@ -43,6 +50,8 @@ export function AddWatermarkClient() {
       toast.error("Could not read this PDF. It may be corrupted or password-protected.");
       setFile(null);
       setPageCount(0);
+    } finally {
+      setIsInspecting(false);
     }
   }, []);
 
@@ -64,12 +73,14 @@ export function AddWatermarkClient() {
     setIsRenderingPreview(true);
 
     async function render() {
+      let pdfDoc: PDFDocumentProxy | null = null;
       try {
+        await ensurePdfWorker();
         const pdfjsLib = await import("pdfjs-dist");
         pdfjsLib.GlobalWorkerOptions.workerSrc = "/pdf.worker.min.mjs";
 
         const arrayBuffer = await fileForPreview.arrayBuffer();
-        const pdfDoc = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+        pdfDoc = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
         const page = await pdfDoc.getPage(1);
 
         if (cancelled) return;
@@ -98,6 +109,7 @@ export function AddWatermarkClient() {
       } catch {
         if (!cancelled) toast.error("Failed to render preview.");
       } finally {
+        await pdfDoc?.destroy().catch(() => undefined);
         if (!cancelled) setIsRenderingPreview(false);
       }
     }
@@ -161,7 +173,7 @@ export function AddWatermarkClient() {
       }
     }
     ctx.restore();
-  }, [text, opacity, rotation, fontSize, color, position, tiled]);
+  }, [text, opacity, rotation, fontSize, color, position, tiled, isRenderingPreview]);
 
   const handleApply = async () => {
     if (!file || !text.trim()) return;
@@ -193,7 +205,7 @@ export function AddWatermarkClient() {
       title="Add Watermark"
       description="Add a text watermark to every page of your PDF."
     >
-      <div className="space-y-6">
+      <ToolWorkspace busy={isProcessing || isInspecting} status={isInspecting ? "Reading PDF… Please wait." : undefined} className="space-y-6">
         {!file ? (
           <DropZone
             onDrop={handleDrop}
@@ -245,7 +257,7 @@ export function AddWatermarkClient() {
               id="pages"
               value={pageRange}
               onChange={(e) => setPageRange(e.target.value)}
-              placeholder={pageCount ? `Leave blank for all ${pageCount} pages` : "Leave blank for all pages"}
+              placeholder={pageCount ? `Leave blank for all ${pageCount} page${pageCount === 1 ? "" : "s"}` : "Leave blank for all pages"}
             />
           </div>
 
@@ -265,10 +277,10 @@ export function AddWatermarkClient() {
 
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <Label>Opacity</Label>
+              <Label id="watermark-opacity">Opacity</Label>
               <span className="text-sm text-gray-500">{Math.round(opacity * 100)}%</span>
             </div>
-            <Slider
+            <Slider aria-labelledby="watermark-opacity"
               min={0.05}
               max={1}
               step={0.05}
@@ -279,10 +291,10 @@ export function AddWatermarkClient() {
 
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <Label>Rotation</Label>
+              <Label id="watermark-rotation">Rotation</Label>
               <span className="text-sm text-gray-500">{rotation}°</span>
             </div>
-            <Slider
+            <Slider aria-labelledby="watermark-rotation"
               min={0}
               max={360}
               step={5}
@@ -293,10 +305,10 @@ export function AddWatermarkClient() {
 
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <Label>Font size</Label>
+              <Label id="watermark-font-size">Font size</Label>
               <span className="text-sm text-gray-500">{fontSize}pt</span>
             </div>
-            <Slider
+            <Slider aria-labelledby="watermark-font-size"
               min={12}
               max={120}
               step={4}
@@ -388,7 +400,7 @@ export function AddWatermarkClient() {
             {isProcessing ? "Applying…" : "Apply Watermark"}
           </Button>
         </div>
-      </div>
+      </ToolWorkspace>
     </ToolLayout>
   );
 }

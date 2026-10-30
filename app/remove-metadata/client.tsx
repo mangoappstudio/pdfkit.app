@@ -4,6 +4,7 @@ import { useState, useCallback } from "react";
 import { Eraser, FileText } from "lucide-react";
 import { toast } from "sonner";
 import { ToolLayout } from "@/components/tool-layout";
+import { ToolWorkspace } from "@/components/tool-workspace";
 import { DropZone } from "@/components/drop-zone";
 import { Button } from "@/components/ui/button";
 import { deepScrubPDF, getPDFPageCount } from "@/lib/pdf-utils";
@@ -14,10 +15,13 @@ export function RemoveMetadataClient() {
   const [file, setFile] = useState<File | null>(null);
   const [pageCount, setPageCount] = useState(0);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [isInspecting, setIsInspecting] = useState(false);
 
   const handleDrop = useCallback(async (files: File[]) => {
     const f = files[0];
     if (!f) return;
+    setIsInspecting(true);
+    setPageCount(0);
     setFile(f);
     try {
       const count = await getPDFPageCount(f);
@@ -26,6 +30,8 @@ export function RemoveMetadataClient() {
       toast.error("Could not read this PDF. It may be corrupted or password-protected.");
       setFile(null);
       setPageCount(0);
+    } finally {
+      setIsInspecting(false);
     }
   }, []);
 
@@ -49,7 +55,7 @@ export function RemoveMetadataClient() {
       title="Remove Metadata"
       description="Rebuild a PDF locally to remove document metadata before sharing."
     >
-      <div className="space-y-6">
+      <ToolWorkspace busy={isProcessing || isInspecting} status={isInspecting ? "Reading PDF… Please wait." : undefined} className="space-y-6">
         {!file ? (
           <DropZone
             onDrop={handleDrop}
@@ -62,7 +68,7 @@ export function RemoveMetadataClient() {
             <FileText className="w-5 h-5 text-gray-400" />
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium text-gray-800 truncate">{file.name}</p>
-              <p className="text-xs text-gray-400">{pageCount} pages</p>
+              <p className="text-xs text-gray-400">{pageCount} page{pageCount === 1 ? "" : "s"}</p>
             </div>
             <button
               className="text-xs text-gray-400 hover:text-red-500 transition-colors shrink-0"
@@ -94,7 +100,7 @@ export function RemoveMetadataClient() {
             </Button>
           </div>
         )}
-      </div>
+      </ToolWorkspace>
     </ToolLayout>
   );
 }

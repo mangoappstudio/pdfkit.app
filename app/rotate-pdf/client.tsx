@@ -4,6 +4,7 @@ import { useCallback, useMemo, useState } from "react";
 import { FileText, Loader2, RotateCw } from "lucide-react";
 import { toast } from "sonner";
 import { ToolLayout } from "@/components/tool-layout";
+import { ToolWorkspace } from "@/components/tool-workspace";
 import { DropZone } from "@/components/drop-zone";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -23,6 +24,7 @@ export function RotatePDFClient() {
   const [rotation, setRotation] = useState<RotationDegrees>(90);
   const [direction, setDirection] = useState<"clockwise" | "counterclockwise">("clockwise");
   const [isProcessing, setIsProcessing] = useState(false);
+  const [isInspecting, setIsInspecting] = useState(false);
 
   const effectiveRotation = useMemo<RotationDegrees>(() => {
     if (direction === "clockwise") return rotation;
@@ -32,8 +34,9 @@ export function RotatePDFClient() {
   const handleDrop = useCallback(async (files: File[]) => {
     const f = files[0];
     if (!f) return;
-    setFile(f);
+    setIsInspecting(true);
     setPageCount(0);
+    setFile(f);
     try {
       const count = await getPDFPageCount(f);
       setPageCount(count);
@@ -41,6 +44,8 @@ export function RotatePDFClient() {
       toast.error("Could not read this PDF. It may be corrupted or password-protected.");
       setFile(null);
       setPageCount(0);
+    } finally {
+      setIsInspecting(false);
     }
   }, []);
 
@@ -72,7 +77,7 @@ export function RotatePDFClient() {
       title="Rotate PDF"
       description="Rotate every page in your PDF. For selective rotation, use Reorder Pages."
     >
-      <div className="space-y-6">
+      <ToolWorkspace busy={isProcessing || isInspecting} status={isInspecting ? "Reading PDF… Please wait." : undefined} className="space-y-6">
         {!file ? (
           <DropZone
             onDrop={handleDrop}
@@ -85,7 +90,7 @@ export function RotatePDFClient() {
             <FileText className="w-5 h-5 text-gray-400" />
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium text-gray-800 truncate">{file.name}</p>
-              <p className="text-xs text-gray-400">{pageCount ? `${pageCount} pages` : "Reading PDF…"}</p>
+              <p className="text-xs text-gray-400">{pageCount ? `${pageCount} page${pageCount === 1 ? "" : "s"}` : "Reading PDF…"}</p>
             </div>
             <button
               className="text-xs text-gray-400 hover:text-red-500 transition-colors"
@@ -152,7 +157,7 @@ export function RotatePDFClient() {
             )}
           </Button>
         </div>
-      </div>
+      </ToolWorkspace>
     </ToolLayout>
   );
 }

@@ -5,6 +5,7 @@ import { FileCode2, FileText, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { PDFDocument } from "pdf-lib";
 import { ToolLayout } from "@/components/tool-layout";
+import { ToolWorkspace } from "@/components/tool-workspace";
 import { DropZone } from "@/components/drop-zone";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -164,13 +165,19 @@ export function HtmlToPDFClient() {
       iframe.style.width = `${clamp(widthPx, 320, 1400)}px`;
       iframe.style.height = "1px";
 
-      iframe.srcdoc = srcdoc;
-      document.body.appendChild(iframe);
-
-      await new Promise<void>((resolve) => {
-        iframe.onload = () => resolve();
-        // srcdoc sometimes doesn't fire reliably in some engines; this is a fallback.
-        setTimeout(() => resolve(), 50);
+      await new Promise<void>((resolve, reject) => {
+        const timeout = setTimeout(() => reject(new Error("HTML rendering timed out. Try simplifying the HTML.")), 10000);
+        iframe.onload = () => {
+          if (iframe.contentDocument?.URL !== "about:srcdoc") return;
+          clearTimeout(timeout);
+          resolve();
+        };
+        iframe.onerror = () => {
+          clearTimeout(timeout);
+          reject(new Error("Could not load this HTML. Please try again."));
+        };
+        iframe.srcdoc = srcdoc;
+        document.body.appendChild(iframe);
       });
 
       const doc = iframe.contentDocument;
@@ -253,7 +260,7 @@ export function HtmlToPDFClient() {
       title="HTML to PDF"
       description="Convert HTML code or an HTML file to PDF. Output is rasterized (screenshot-style)."
     >
-      <div className="space-y-6">
+      <ToolWorkspace busy={isProcessing} className="space-y-6">
         <div className="flex flex-wrap gap-2">
           <Button
             type="button"
@@ -277,7 +284,7 @@ export function HtmlToPDFClient() {
               <FileCode2 className="w-4 h-4 text-gray-600" />
               <h2 className="text-sm font-semibold text-gray-800">HTML code</h2>
             </div>
-            <textarea
+            <textarea aria-label="HTML code"
               className="w-full min-h-[220px] rounded-lg border border-gray-200 bg-white p-3 text-sm font-mono"
               value={htmlCode}
               onChange={(e) => setHtmlCode(e.target.value)}
@@ -380,7 +387,7 @@ export function HtmlToPDFClient() {
             )}
           </Button>
         </div>
-      </div>
+      </ToolWorkspace>
     </ToolLayout>
   );
 }
