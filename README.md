@@ -88,6 +88,10 @@ The checks preserve truthful free pricing without adding ratings or reviews.
 Software-app rich results still require a genuine rating or review under
 [Google's requirements](https://developers.google.com/search/docs/appearance/structured-data/software-app).
 
+## Usability validation
+
+See [UX_AUDIT.md](UX_AUDIT.md) for the all-tools audit, browser regression commands, screenshots, and validation limits.
+
 ## Tools
 
 | Tool | Route | Description |
