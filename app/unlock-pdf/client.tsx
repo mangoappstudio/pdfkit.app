@@ -70,6 +70,10 @@ export function UnlockPDFClient() {
       const { PDF, PermissionDeniedError } = await import("@libpdf/core");
       const bytes = new Uint8Array(await file.arrayBuffer());
       const pdf = await PDF.load(bytes, { credentials: password });
+      if (pdf.isEncrypted && !pdf.isAuthenticated) {
+        toast.error("Incorrect password for this PDF.");
+        return;
+      }
 
       try {
         pdf.removeProtection();

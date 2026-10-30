@@ -125,6 +125,10 @@ export function ProtectPDFClient() {
       const pdf = requiresCurrentPassword
         ? await PDF.load(bytes, { credentials: currentPassword })
         : await PDF.load(bytes);
+      if (pdf.isEncrypted && !pdf.isAuthenticated) {
+        toast.error("Incorrect password for this PDF.");
+        return;
+      }
 
       pdf.setProtection({
         userPassword: userPassword,
