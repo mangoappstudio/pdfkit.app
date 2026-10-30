@@ -164,13 +164,19 @@ export function HtmlToPDFClient() {
       iframe.style.width = `${clamp(widthPx, 320, 1400)}px`;
       iframe.style.height = "1px";
 
-      iframe.srcdoc = srcdoc;
-      document.body.appendChild(iframe);
-
-      await new Promise<void>((resolve) => {
-        iframe.onload = () => resolve();
-        // srcdoc sometimes doesn't fire reliably in some engines; this is a fallback.
-        setTimeout(() => resolve(), 50);
+      await new Promise<void>((resolve, reject) => {
+        const timeout = setTimeout(() => reject(new Error("HTML rendering timed out. Try simplifying the HTML.")), 10000);
+        iframe.onload = () => {
+          if (iframe.contentDocument?.URL !== "about:srcdoc") return;
+          clearTimeout(timeout);
+          resolve();
+        };
+        iframe.onerror = () => {
+          clearTimeout(timeout);
+          reject(new Error("Could not load this HTML. Please try again."));
+        };
+        iframe.srcdoc = srcdoc;
+        document.body.appendChild(iframe);
       });
 
       const doc = iframe.contentDocument;
