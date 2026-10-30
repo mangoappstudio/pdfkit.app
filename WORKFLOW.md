@@ -140,7 +140,7 @@ merge:
   method: squash
   dry_run: false
   required_reviews: 0
-  policy_version: pdfkit.app-validated-no-review-v1
+  policy_version: pdfkit.app-available-checks-v2
   required_evidence:
     standard:
       - validation
@@ -199,7 +199,7 @@ Instructions:
 
 Pause protocol:
 
-When you need user input before continuing, end with this exact block and do not open a PR:
+When you need user input before continuing, end with this exact block. If implementation exists, first push it and open/update a draft PR with the blocker:
 
 ```text
 SYMPHONY_PAUSE
@@ -221,6 +221,10 @@ Do not close the issue unless the workflow explicitly says to.
 
 Symphony runs the configured local validation and automatically merges the PR after it passes. Do not merge from the coding agent or run a competing autopilot merge job. Do not change existing automation schedules.
 
-Delivery policy: code review is not required. Run relevant development checks, push the issue branch, and open a non-draft PR with Fixes #{{ issue.number }}. Symphony performs final local validation and merging. Do not claim a deployment or native release just because the PR merged. Pause with SYMPHONY_PAUSE when a product decision, unavailable device evidence, credentials, destructive data change, or another human decision prevents validation.
+Delivery policy: code review is not required. Prioritize shipping these side projects: run available checks, push the issue branch, and open a non-draft PR with Fixes #{{ issue.number }}. Symphony performs final local validation and merging. Missing native SDKs, Java/Xcode, devices/emulators, development builds, native dependencies or native-only Firebase/signing credentials are authorized test skips, never reasons to pause or withhold a PR. This policy supersedes older issue/grooming requirements for native evidence. Document each skipped check and reason in the PR and issue; never report it as passed. Continue web, static and unit checks that can run. Actual code/build/test failures with available prerequisites still block completion. Deployment and native release remain separate. Pause only for unresolved product/security/data-loss/cost decisions or credentials needed to implement or validate non-native behavior.
 
-For dependency installation, use the shared helper exposed in the agent environment: `node "$SYMPHONY_DEPENDENCY_HELPER" -- npm ci` or `node "$SYMPHONY_DEPENDENCY_HELPER" -- yarn install --frozen-lockfile --non-interactive --prefer-offline`, matching this repository's package manager. It reuses a validated install and reruns when dependency inputs change. Preserve warm dependencies and caches; never share a mutable node_modules directory between concurrent workspaces.
+Before native work, run a bounded prerequisite probe using `node scripts/symphony-native-check.mjs --platform android --probe` (or ios/macos). Use `--require-file <path>` for a required local config file. Inspect whether an existing development build and device are already usable; do not boot emulators, provision SDKs, fetch private configuration, register Firebase apps or spend the task debugging the host. If unavailable, record the skip and continue. Execute native commands through `node scripts/symphony-native-check.mjs --platform <platform> -- <command> <args>`; it skips recognized infrastructure failures and preserves actual test failures. Copy `.symphony/native-checks.jsonl` outcomes into the PR verification section. Do not repeatedly retry known missing prerequisites during the same task.
+
+Publish the implementation branch and PR as soon as implementation and available checks finish. For a genuine human decision that still blocks delivery, publish a draft PR with completed work and the blocker before pausing; omit a PR only when no implementation exists. Do not wait an entire agent turn trying to repair the environment.
+
+For dependency installation, use the shared helper exposed in the agent environment: `node "$SYMPHONY_DEPENDENCY_HELPER" -- npm ci` or `node "$SYMPHONY_DEPENDENCY_HELPER" -- yarn install --frozen-lockfile --non-interactive --prefer-offline`, matching this repository's package manager. It reuses a validated install and reruns when dependency inputs change. Install once before relevant checks, then reuse the same helper arguments in final validation. Do not delete node_modules, clear package caches or force reinstall as routine setup. A cold pool slot needs its first install; inspect the helper cache-miss reason before retrying a slow install. Preserve warm dependencies and caches; never share a mutable node_modules directory between concurrent workspaces.

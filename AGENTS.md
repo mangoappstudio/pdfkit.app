@@ -82,3 +82,8 @@ This project’s core promise is “local-only processing”.
 
 - `next.config.ts` disables the `canvas` alias in webpack. Keep this unless you intentionally change how PDF.js is bundled.
 - `eslint.config.mjs` ignores `public/pdf.worker.min.mjs` because it’s vendored/copied output; keep it treated as generated.
+
+
+## Symphony native verification
+
+For Symphony side-project tasks, follow the delivery policy in `WORKFLOW.md`: missing native prerequisites authorize documented skips and do not block PR creation or merging. Use `scripts/symphony-native-check.mjs` before native checks. Run available checks; genuine code/test failures still block. Older device-evidence requirements are deferred when the device/build/configuration is unavailable. Native releases and deployment remain separate.
