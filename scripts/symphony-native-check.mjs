@@ -16,16 +16,26 @@ export function infrastructureFailure(output) {
   ].find(([, pattern]) => pattern.test(output))?.[0] ?? null;
 }
 
-export function prerequisites(platform, env = process.env) {
+export function prerequisites(platform, env = process.env, device = false) {
   const run = (cmd, args) => spawnSync(cmd, args, {env, timeout: 10000, encoding: 'utf8'});
   if (platform === 'android') {
     const javaHome = env.JAVA_HOME;
     const java = javaHome ? path.join(javaHome, 'bin/java') : 'java';
     if (run(java, ['-version']).status !== 0) return 'Java unavailable';
     const sdk = env.ANDROID_HOME || env.ANDROID_SDK_ROOT || path.join(os.homedir(), 'Library/Android/sdk');
-    if (run(process.execPath, ['-e', 'require("fs").accessSync(process.argv[1])', sdk]).status !== 0) return 'Android SDK unavailable';
+    if (run(process.execPath, ['-e', 'for(const p of process.argv.slice(1)) require("fs").accessSync(p)', path.join(sdk, 'platforms'), path.join(sdk, 'build-tools')]).status !== 0) return 'Android SDK unavailable';
+    if (device) {
+      const adb = path.join(sdk, 'platform-tools/adb');
+      if (run(adb, ['get-state']).stdout?.trim() !== 'device' || run(adb, ['shell', 'getprop', 'sys.boot_completed']).stdout?.trim() !== '1' || run(adb, ['shell', 'cmd', 'package', 'list', 'packages']).status !== 0) return 'Android device or package services unavailable';
+    }
   } else if (platform === 'ios' || platform === 'macos') {
     if (run('xcrun', ['--find', platform === 'ios' ? 'simctl' : 'swift']).status !== 0 || run('xcodebuild', ['-version']).status !== 0) return 'Xcode unavailable';
+    if (platform === 'ios' && device) {
+      const result = run('xcrun', ['simctl', 'list', 'devices', 'booted', '--json']);
+      let devices;
+      try { devices = JSON.parse(result.stdout).devices; } catch { return 'iOS simulator unavailable'; }
+      if (result.status !== 0 || !Object.values(devices ?? {}).flat().some(item => item.state === 'Booted' && item.isAvailable !== false)) return 'iOS simulator unavailable';
+    }
   } else throw new Error('Expected --platform android, ios or macos');
   return null;
 }
@@ -35,7 +45,7 @@ async function main(args) {
   const options = separator < 0 ? args : args.slice(0, separator);
   const platform = options[options.indexOf('--platform') + 1];
   if (!options.includes('--platform')) throw new Error('Expected --platform android|ios|macos [--probe] [--require-file path] -- command [args]');
-  let reason = prerequisites(platform);
+  let reason = prerequisites(platform, process.env, options.includes('--device'));
   if (!reason && options.includes('--require-file')) {
     const file = options[options.indexOf('--require-file') + 1];
     if (!file) throw new Error('Expected a path after --require-file');
