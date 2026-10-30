@@ -15,8 +15,11 @@ export async function mergePDFs(files: File[]): Promise<Uint8Array> {
 // Parse a page range string like "1-3,5,8-10" into zero-based page indices
 export function parsePageRanges(rangeStr: string, totalPages: number): number[] {
   const indices: number[] = [];
-  const parts = rangeStr.split(",").map((s) => s.trim()).filter(Boolean);
+  const parts = rangeStr.split(",").map((s) => s.trim());
   for (const part of parts) {
+    if (!/^\d+(?:\s*-\s*\d+)?$/.test(part)) {
+      throw new Error(`Invalid page range: ${part || "empty entry"}. Use page numbers or ranges such as 1-3,5.`);
+    }
     if (part.includes("-")) {
       const [start, end] = part.split("-").map((s) => parseInt(s.trim(), 10));
       if (isNaN(start) || isNaN(end)) throw new Error(`Invalid range: ${part}`);
