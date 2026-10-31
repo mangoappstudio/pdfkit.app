@@ -173,16 +173,18 @@ MIT. See `LICENSE`.
 ## Install and work offline
 
 Open the production app online over HTTPS (localhost also works) and wait for
-**Ready offline** in the **Install & offline** row. This prepares the homepage,
+**Ready offline** inside **Install app** in the navigation. This prepares the homepage,
 all 18 tools, About and Privacy, and all processing libraries, even tools you
 have not visited. You can then reopen the app, navigate, preview, process local
 files and download results without a connection. Installation is optional.
-Expand that row for desktop Chrome/Edge, Android Chrome and iOS/iPadOS Safari
-installation instructions. Browsers without installation support keep working
+Open **Install app** for a native install button when supported, or concise
+instructions for your browser. **Offline details** explains storage and connectivity
+limits. Installed app sessions hide these controls; offline setup continues in the
+background. Browsers without installation support keep working
 as a website. Development mode does not register a service worker.
 
 First setup and updates require internet. Interrupted setup never reports ready;
-reconnect and use **Check / retry offline setup**. New versions wait until all
+reconnect and use **Install app → Check / retry offline setup**. New versions wait until all
 PDFKit windows close; finish your work and save downloads before reopening.
 Browser storage eviction or clearing site data can remove offline availability.
 External links (including GitHub support) and remotely hosted images, fonts or

@@ -85,8 +85,8 @@ async function cacheSnapshot() {
 try {
   if (process.env.PDFKIT_OFFLINE === "1") {
     await page.goto(base);
-    await page.getByRole("status").filter({ hasText: "Ready offline" }).waitFor({ timeout: 120000 });
-    await page.locator("summary").filter({ hasText: "Install & offline" }).click();
+    await page.locator('[role="status"]').filter({ hasText: "Ready offline" }).waitFor({ state: 'attached', timeout: 120000 });
+    await page.locator("summary").filter({ hasText: "Install app" }).click();
     await page.screenshot({ path: path.join(artifacts, "offline-desktop.png") });
     await page.setViewportSize({ width: 375, height: 812 });
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
