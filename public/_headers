@@ -2,3 +2,8 @@
   Strict-Transport-Security: max-age=63072000
   X-Content-Type-Options: nosniff
   Referrer-Policy: strict-origin-when-cross-origin
+
+/sw.js
+  Cache-Control: no-cache, no-store, must-revalidate
+  Content-Type: application/javascript; charset=utf-8
+  Content-Security-Policy: default-src 'self'; script-src 'self'
