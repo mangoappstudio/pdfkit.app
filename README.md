@@ -169,3 +169,26 @@ These are intentionally not in the MVP:
 ## License
 
 MIT. See `LICENSE`.
+
+## Install and work offline
+
+Open the production app online over HTTPS (localhost also works) and wait for
+**Ready offline** in the **Install & offline** row. This prepares the homepage,
+all 18 tools, About and Privacy, and all processing libraries, even tools you
+have not visited. You can then reopen the app, navigate, preview, process local
+files and download results without a connection. Installation is optional.
+Expand that row for desktop Chrome/Edge, Android Chrome and iOS/iPadOS Safari
+installation instructions. Browsers without installation support keep working
+as a website. Development mode does not register a service worker.
+
+First setup and updates require internet. Interrupted setup never reports ready;
+reconnect and use **Check / retry offline setup**. New versions wait until all
+PDFKit windows close; finish your work and save downloads before reopening.
+Browser storage eviction or clearing site data can remove offline availability.
+External links (including GitHub support) and remotely hosted images, fonts or
+styles in imported HTML require internet. Use self-contained inputs offline.
+No document persistence, accounts, synchronization or new support service is added.
+
+Only application resources are cached, never source files, filenames, passwords,
+extracted text or generated outputs. See [docs/offline.md](docs/offline.md) for
+implementation, verification and limits.

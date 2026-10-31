@@ -8,8 +8,8 @@
   "packageManager": "yarn@1.22.22",
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
-    "build:cloudflare": "CLOUDFLARE_PAGES=1 next build",
+    "build": "next build && node scripts/build-offline.mjs",
+    "build:cloudflare": "CLOUDFLARE_PAGES=1 next build && CLOUDFLARE_PAGES=1 node scripts/build-offline.mjs",
     "preview:cloudflare": "wrangler pages dev",
     "deploy:cloudflare": "yarn build:cloudflare && wrangler pages deploy --branch main",
     "start": "next start",

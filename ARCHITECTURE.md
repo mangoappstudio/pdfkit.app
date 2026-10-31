@@ -46,3 +46,12 @@ stable path.
   document-derived data.
 - Prefer pure functions in `lib/` so tools remain easy to audit.
 
+
+## Offline application shell
+
+Production builds generate a versioned service worker after Next has emitted all
+pages and lazy chunks. It precaches application assets only; document inputs and
+outputs remain in browser memory/downloads. `components/offline-access.tsx`
+provides readiness, retry and installation guidance. Updates wait until all app
+windows close. See [docs/offline.md](docs/offline.md) for cache boundaries,
+full-document navigation, hosting requirements and verification.

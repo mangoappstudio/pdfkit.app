@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { OfflineAccess } from "@/components/offline-access";
 
 const githubRepoUrl = "https://github.com/mangoappstudio/pdfkit.app";
 
@@ -35,6 +36,7 @@ export function SiteNav() {
           </a>
         </div>
       </div>
+      <OfflineAccess />
     </header>
   );
 }

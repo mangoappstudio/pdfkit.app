@@ -1,6 +1,8 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { Toaster } from "@/components/ui/sonner";
+
+export const viewport: Viewport = { themeColor: "#2563eb" };
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://www.pdfkit.app"),
@@ -12,6 +14,8 @@ export const metadata: Metadata = {
     "Redact, extract, remove pages, watermark, and merge sensitive PDFs locally in your browser before sharing or uploading them anywhere.",
   keywords: ["PDF", "redact PDF", "extract pages", "remove pages", "watermark PDF", "merge PDF", "split PDF", "local processing", "private"],
   applicationName: "PDFKit.app",
+  appleWebApp: { capable: true, title: "PDFKit", statusBarStyle: "default" },
+  icons: { apple: "/icons/apple-touch-icon.png", icon: "/icons/icon-192.png" },
   robots: {
     index: true,
     follow: true,

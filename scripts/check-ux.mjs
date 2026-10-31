@@ -26,9 +26,9 @@ const other = await PDFDocument.create(); other.addPage([310, 410]);
 const otherFixture = path.join(artifacts, "other.pdf");
 await writeFile(otherFixture, await other.save());
 await writeFile(corrupt, "not a PDF"); await writeFile(wrong, "wrong file type");
-const browser = await chromium.launch({ headless: true });
+const browser = await chromium.launch({ headless: true, ...(process.env.PDFKIT_CHROMIUM_EXECUTABLE ? { executablePath: process.env.PDFKIT_CHROMIUM_EXECUTABLE } : {}) });
 const context = await browser.newContext({ viewport: { width: 1280, height: 1000 }, hasTouch: true });
-const page = await context.newPage(); page.setDefaultTimeout(30000);
+let page = await context.newPage(); page.setDefaultTimeout(30000);
 const errors = []; const documentRequests = [];
 page.on("pageerror", (error) => errors.push(error.message));
 page.on("request", (request) => {
@@ -67,7 +67,46 @@ async function touchDraw() {
   await cdp.detach();
   return { x: 40 * 300 / rect.width, y: 400 - 100 * 400 / rect.height, width: 120 * 300 / rect.width, height: 60 * 400 / rect.height };
 }
+let offlineCacheSnapshot;
+async function cacheSnapshot() {
+  return page.evaluate(async () => {
+    const snapshot = [];
+    for (const name of await caches.keys()) {
+      const cache = await caches.open(name);
+      for (const request of await cache.keys()) {
+        const bytes = await (await cache.match(request)).arrayBuffer();
+        const hash = Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', bytes))).map((n) => n.toString(16).padStart(2, '0')).join('');
+        snapshot.push([request.url, hash]);
+      }
+    }
+    return snapshot.sort(([a], [b]) => a.localeCompare(b));
+  });
+}
 try {
+  if (process.env.PDFKIT_OFFLINE === "1") {
+    await page.goto(base);
+    await page.getByRole("status").filter({ hasText: "Ready offline" }).waitFor({ timeout: 120000 });
+    await page.locator("summary").filter({ hasText: "Install & offline" }).click();
+    await page.screenshot({ path: path.join(artifacts, "offline-desktop.png") });
+    await page.setViewportSize({ width: 375, height: 812 });
+    assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
+    await page.screenshot({ path: path.join(artifacts, "offline-mobile.png") });
+    // A fresh tab has no route or library state from the online homepage.
+    offlineCacheSnapshot = await cacheSnapshot();
+    await context.setOffline(true);
+    const fresh = await context.newPage(); await page.close(); page = fresh;
+    page.on("pageerror", (error) => errors.push(error.message));
+    page.on("request", (request) => { if (["POST", "PUT", "PATCH"].includes(request.method())) documentRequests.push(request.url()); });
+    for (const route of ["", ...routes, "about", "privacy"]) {
+      await open(route); await page.reload(); await ready();
+    }
+    await page.goto(base);
+    await page.getByRole("link", { name: "Prepare", exact: true }).first().click();
+    await page.waitForURL(`${base}/prepare`); await ready();
+    assert.equal((await page.evaluate(async () => (await fetch('/pdf.worker.min.mjs', { method: 'HEAD', cache: 'no-store' })).status)), 200);
+    assert.ok((await page.evaluate(async () => (await fetch('/pdf.worker.min.mjs')).text())).length > 1000);
+    console.log("PASS offline fresh-tab direct loads, reloads, navigation, PDF.js HEAD/GET, mobile layout");
+  }
   // Every tool: empty state, file rejection/recovery, corrupt input/recovery,
   // accessible picker, and narrow-screen overflow. Exports tested below.
   if (!["exports", "pointer"].includes(process.env.PDFKIT_UX_PHASE)) {
@@ -182,6 +221,11 @@ try {
   await page.getByRole("button", { name: "Page 1 (selected)", exact: true }).click();
   const images = await download(() => page.getByRole("button", { name: "Export 2 pages to zip", exact: true }).click());
   assert.deepEqual(Object.keys((await JSZip.loadAsync(images.bytes)).files).sort(), ["page-2.png", "page-3.png"]);
+  for (const entry of Object.values((await JSZip.loadAsync(images.bytes)).files)) {
+    const bytes = await entry.async('nodebuffer');
+    assert.equal(bytes.subarray(0, 8).toString('hex'), '89504e470d0a1a0a');
+    assert.ok(bytes.readUInt32BE(16) > 0 && bytes.readUInt32BE(20) > 0);
+  }
   console.log("PASS split and PDF-to-images ZIP exports");
   await open("add-watermark"); await upload();
   const watermarked = await pdfDownload(() => page.getByRole("button", { name: "Apply Watermark", exact: true }).click());
@@ -271,6 +315,16 @@ try {
     if (route === "edit-pdf") assert.equal((content(mouseOutput.output).match(/1 1 1 rg/g) || []).length, 2, "cancelled gesture adds no whiteout");
     else await page.getByText("3 pages · 2 redactions applied", { exact: true }).waitFor();
     console.log(`PASS zoomed touch/mouse/cancellation and export: ${route}`);
+  }
+  if (process.env.PDFKIT_OFFLINE === "1") {
+    const keys = await page.evaluate(async () => {
+      const names = await caches.keys();
+      return (await Promise.all(names.map(async (name) => (await (await caches.open(name)).keys()).map((r) => r.url)))).flat();
+    });
+    assert.ok(keys.length > 30);
+    assert.ok(keys.every((url) => !/sample|synthetic|protected|blob:|password|filename|\?/.test(url)), "no document data in cache");
+    assert.deepEqual(await cacheSnapshot(), offlineCacheSnapshot, "processing never changes cached app resources");
+    console.log(`PASS cache privacy: ${keys.length} app-only entries`);
   }
   assert.deepEqual(errors, [], "uncaught browser errors"); assert.deepEqual(documentRequests, [], "document processing made a network write");
   console.log(`PASS ${process.env.PDFKIT_UX_PHASE ? `${process.env.PDFKIT_UX_PHASE} checks` : "all 18 tools"}. Artifacts: ${artifacts}`);
