@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 
 type InstallPrompt = Event & {
   prompt: () => Promise<void>;
@@ -26,15 +26,35 @@ async function offlineReady(worker: ServiceWorker): Promise<boolean> {
   });
 }
 
+function subscribeDisplayMode(onChange: () => void) {
+  const query = window.matchMedia("(display-mode: standalone)");
+  query.addEventListener("change", onChange);
+  return () => query.removeEventListener("change", onChange);
+}
+
+function isInstalled() {
+  let observedInstall = false;
+  try { observedInstall = sessionStorage.getItem("pdfkit-installed") === "true"; } catch { /* Storage may be disabled. */ }
+  return window.matchMedia("(display-mode: standalone)").matches ||
+    (navigator as Navigator & { standalone?: boolean }).standalone === true || observedInstall;
+}
+
 export function OfflineAccess() {
+  const detailsRef = useRef<HTMLDetailsElement>(null);
   const [status, setStatus] = useState("Preparing offline access…");
   const [update, setUpdate] = useState(false);
   const [attempt, setAttempt] = useState(0);
+  const [observedInstall, setInstalled] = useState(false);
+  const installed = useSyncExternalStore(subscribeDisplayMode, isInstalled, () => null);
   const [prompt, setPrompt] = useState<InstallPrompt | null>(null);
 
   useEffect(() => {
     const receivePrompt = (event: Event) => { event.preventDefault(); setPrompt(event as InstallPrompt); };
-    const installed = () => setPrompt(null);
+    const installed = () => {
+      setPrompt(null);
+      setInstalled(true);
+      try { sessionStorage.setItem("pdfkit-installed", "true"); } catch { /* Detection still works without storage. */ }
+    };
     window.addEventListener("beforeinstallprompt", receivePrompt);
     window.addEventListener("appinstalled", installed);
     return () => {
@@ -108,26 +128,51 @@ export function OfflineAccess() {
     };
   }, [attempt]);
 
+  // Keep all offline lifecycle effects running even when installation UI is hidden.
+  // Wait for client detection so installed sessions never flash an install prompt.
+  if (installed !== false || observedInstall) return null;
+
+  const ios = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+  const guidance = ios
+    ? "In Safari, tap Share → Add to Home Screen."
+    : /Android/.test(navigator.userAgent)
+      ? "In Chrome, open the menu → Add to home screen / Install app."
+      : "Use your browser’s address bar install icon or menu → Install PDFKit. If unavailable, keep using the website.";
+
   return (
-    <details className="border-t border-gray-100 text-sm text-gray-600">
-      <summary className="mx-auto max-w-6xl cursor-pointer px-4 py-2 sm:px-6 focus-visible:outline-2 focus-visible:outline-blue-600">
-        Install &amp; offline <span aria-hidden="true">· </span><span role="status">{status}</span>
+    <details ref={detailsRef} className="text-sm text-gray-600" onKeyDown={(event) => {
+      if (event.key === "Escape") {
+        event.currentTarget.open = false;
+        event.currentTarget.querySelector("summary")?.focus();
+      }
+    }}>
+      <summary className="cursor-pointer rounded-md px-2 py-2 hover:bg-gray-100 hover:text-gray-900 focus-visible:outline-2 focus-visible:outline-blue-600">
+        Install app
       </summary>
-      <div className="mx-auto max-w-6xl space-y-3 px-4 pb-4 sm:px-6">
-        <p>All 18 tools work offline after setup. Keep this app open online until you see “Ready offline”. Your documents stay in memory and are never stored in the offline cache.</p>
-        {update && <p role="status">An update is ready. Finish your work, then close all PDFKit windows and reopen to use it.</p>}
-        {prompt && <button type="button" className="rounded-md bg-blue-600 px-4 py-2 font-medium text-white hover:bg-blue-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600" onClick={async () => {
+      <div className="absolute right-4 sm:right-6 top-full mt-2 w-80 max-w-[calc(100vw-2rem)] max-h-[calc(100dvh-5rem)] overflow-y-auto rounded-lg border border-gray-200 bg-white p-4 space-y-3">
+        <p className="font-medium text-gray-900">PDFKit, available offline</p>
+        <p role="status">{status}</p>
+        {update && <p role="status">An update is ready. Save your work, then close all PDFKit windows and reopen.</p>}
+        {prompt ? <button type="button" className="rounded-md bg-blue-600 px-4 py-2 font-medium text-white hover:bg-blue-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600" onClick={async () => {
+          // A deferred prompt can only be used once, including after cancellation.
+          setPrompt(null);
           try {
             await prompt.prompt();
             await prompt.userChoice;
           } catch {
             // Browsers may withdraw an installation prompt before it is used.
+          } finally {
+            detailsRef.current?.querySelector("summary")?.focus();
           }
-          setPrompt(null);
-        }}>Install PDFKit</button>}
-        <p>Desktop Chrome / Edge: use the address bar install icon or menu → Install PDFKit. Android Chrome: menu → Add to home screen / Install app. iPhone / iPad Safari: Share → Add to Home Screen. If installation is unavailable, use the website normally.</p>
-        <p>First setup and updates need internet. Clearing browser storage or automatic storage eviction can remove offline access. External links and remote images, fonts, or styles in imported HTML still need internet. Save your downloads before closing the app.</p>
+        }}>Install PDFKit</button> : <p>{guidance}</p>}
         <button type="button" className="underline underline-offset-4 hover:text-gray-900 focus-visible:outline-2 focus-visible:outline-blue-600" onClick={() => setAttempt((value) => value + 1)}>Check / retry offline setup</button>
+        <details>
+          <summary className="cursor-pointer py-1 focus-visible:outline-2 focus-visible:outline-blue-600">Offline details</summary>
+          <div className="mt-2 space-y-2">
+            <p>All 18 tools work offline once ready. Installation is optional. Documents stay local and are never cached.</p>
+            <p>Setup and updates need internet. Clearing or evicting browser storage removes offline access. External links and remote resources in imported HTML need internet. Save downloads before closing.</p>
+          </div>
+        </details>
       </div>
     </details>
   );

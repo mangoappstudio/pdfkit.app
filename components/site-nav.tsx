@@ -6,7 +6,7 @@ const githubRepoUrl = "https://github.com/mangoappstudio/pdfkit.app";
 export function SiteNav() {
   return (
     <header className="border-b border-gray-100 bg-white/80 backdrop-blur-sm sticky top-0 z-50">
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between">
+      <div className="relative max-w-6xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between">
         <Link href="/" className="font-semibold text-gray-900 text-lg">
           PDFKit<span className="text-blue-600">.app</span>
         </Link>
@@ -26,6 +26,7 @@ export function SiteNav() {
             </Link>
           </nav>
 
+          <OfflineAccess />
           <a
             href={githubRepoUrl}
             target="_blank"
@@ -36,7 +37,6 @@ export function SiteNav() {
           </a>
         </div>
       </div>
-      <OfflineAccess />
     </header>
   );
 }

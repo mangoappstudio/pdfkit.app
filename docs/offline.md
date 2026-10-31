@@ -49,6 +49,23 @@ and storage than visiting only the homepage. No support website or remote HTML
 resources are mirrored. Existing rasterization, memory and browser limitations
 continue to apply.
 
+## Installation controls
+
+The navigation contains a compact **Install app** disclosure, with preparation
+status, a native **Install PDFKit** button when available, or browser-specific
+installation instructions. Cancellation returns to usable browser guidance.
+Retry and expandable **Offline details** keep recovery and limitations available
+without a persistent banner. Escape closes the help panel and returns focus.
+
+Standalone display mode and iOS `navigator.standalone` hide the entire control
+before it renders. `appinstalled` hides it immediately and records only a boolean
+in sessionStorage to keep it hidden across same-tab document navigation/reloads
+(storage-disabled browsers still hide it for the current mounted session).
+This does not infer installation from a service worker or persist document data.
+Ordinary tabs cannot reliably detect installations made elsewhere.
+Registration, cache validation, reconnection recovery and safe updates continue
+when the presentation is hidden. No worker/cache behavior changes in issue #30.
+
 ## Reproducible checks
 
 Use the repository's selected Node runtime and install dependencies as documented
@@ -80,7 +97,25 @@ and simulates successive worker versions while preserving unsaved HTML input.
 Unit tests independently exercise cache selection, eviction, incomplete installs,
 retry, update cleanup, privacy and HEAD handling.
 
-## Evidence and coverage limits (issue #28)
+## Evidence for issue #30
+
+The lifecycle suite additionally simulates standalone and iOS home-screen mode,
+reconnects after hidden registration failure, verifies offline navigation/reloads,
+and tests keyboard help, install cancellation and `appinstalled` across navigation.
+These are simulated browser states, not actual OS installations. Set
+`PDFKIT_OFFLINE_ARTIFACTS` to capture compact desktop, desktop/mobile help and
+installed mobile screenshots. Current captures are in [offline-30/](offline-30/).
+Available checks passed for #30: `git diff --check`, `yarn lint` (five existing
+image warnings), all eight `node --experimental-strip-types --test scripts/*.test.mjs`
+tests, `yarn build`, `yarn test:seo .next/server/app`, `yarn build:cloudflare`,
+`yarn test:seo`, the Node lifecycle suite, and the all-tools offline export suite
+against both Node production and Cloudflare's static preview. Processing leaves
+application cache contents unchanged and makes no document-processing network writes.
+
+Physical Safari/iOS/Android installation and actual OS dialogs remain manual
+follow-ups; the available Chromium checks do not certify those platforms.
+
+## Historical evidence and coverage limits (issue #28)
 
 Desktop and 375px installation/readiness screenshots are committed in
 [offline-28/desktop.png](offline-28/desktop.png) and
