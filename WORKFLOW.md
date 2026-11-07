@@ -130,7 +130,25 @@ agents:
       usage_limit_backoff_ms: 3600000
       usage_limit_check_command: |
         codexbar --provider codex --format json --json-only --no-color
+    claude:
+      provider_group: claude
+      provider_kind: claude
+      command: bash -lc 'set -o pipefail; claude -p --permission-mode bypassPermissions < "{{ symphony.prompt_path }}" | tee .symphony/claude.log "$SYMPHONY_LAST_MESSAGE_PATH"'
+      handoff_command: bash -lc 'set -o pipefail; claude -p --permission-mode dontAsk --tools Read,Glob,Grep --allowedTools Read,Glob,Grep --setting-sources "" --strict-mcp-config < "{{ symphony.prompt_path }}" | tee .symphony/claude.log "$SYMPHONY_LAST_MESSAGE_PATH"'
+      output_log: .symphony/claude.log
+      turn_timeout_ms: 3600000
+      max_concurrent: 1
+      usage_limit_exit_codes: [5, 29]
+      usage_limit_backoff_ms: 3600000
+      usage_limit_check_command: |
+        codexbar --provider claude --format json --json-only --no-color
   routes:
+    - provider: codex
+      any_labels: [agent:codex]
+    - provider: claude
+      any_labels: [agent:claude]
+    - provider: claude
+      any_labels: [user-experience, ui, ux, design]
     - provider: codex
       default: true
 merge:
