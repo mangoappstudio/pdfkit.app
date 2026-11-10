@@ -37,6 +37,13 @@ polling:
 workspace:
   root: ~/.symphony/workspaces/pdfkit.app
   clean_on_terminal: true
+  # Ignored build outputs that may be deleted with a finished checkout. End directory paths with /.
+  generated_outputs:
+    - .gstack/
+    - .wrangler/
+    - next-env.d.ts
+    - out/
+    - public/sw.js
   checkout:
     kind: linked_worktree
     source: .
