@@ -133,8 +133,8 @@ agents:
     claude:
       provider_group: claude
       provider_kind: claude
-      command: bash -lc 'set -o pipefail; claude -p --model claude-opus-5-5 --permission-mode bypassPermissions < "{{ symphony.prompt_path }}" | tee .symphony/claude.log "$SYMPHONY_LAST_MESSAGE_PATH"'
-      handoff_command: bash -lc 'set -o pipefail; claude -p --model claude-opus-5-5 --permission-mode dontAsk --tools Read,Glob,Grep --allowedTools Read,Glob,Grep --setting-sources "" --strict-mcp-config < "{{ symphony.prompt_path }}" | tee .symphony/claude.log "$SYMPHONY_LAST_MESSAGE_PATH"'
+      command: bash -lc 'set -o pipefail; claude -p --model claude-opus-5-5 --permission-mode bypassPermissions --output-format stream-json --verbose < "{{ symphony.prompt_path }}" | tee .symphony/claude.log | jq -r "select(.type==\"result\") | .result // empty" > "$SYMPHONY_LAST_MESSAGE_PATH"'
+      handoff_command: bash -lc 'set -o pipefail; claude -p --model claude-opus-5-5 --permission-mode dontAsk --tools Read,Glob,Grep --allowedTools Read,Glob,Grep --setting-sources "" --strict-mcp-config --output-format stream-json --verbose < "{{ symphony.prompt_path }}" | tee .symphony/claude.log | jq -r "select(.type==\"result\") | .result // empty" > "$SYMPHONY_LAST_MESSAGE_PATH"'
       output_log: .symphony/claude.log
       turn_timeout_ms: 3600000
       max_concurrent: 1
