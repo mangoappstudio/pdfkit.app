@@ -24,7 +24,7 @@ Read [references/issue-bodies.md](references/issue-bodies.md) when writing issue
 
 - Problem and desired behavior, grounded evidence/source, and relevant code areas.
 - Scope and non-goals, concrete acceptance criteria, and actual dependencies.
-- An observable verification plan: real commands or a manual/device/browser flow, expected result, relevant error/degraded behavior, required evidence, and whether it can merge independently. Derive commands from manifests, CI, repo guidance and `merge.validation_command`; do not invent tests or claim unperformed checks passed.
+- An observable verification plan: the smallest real command (a focused test target, not the whole suite) or a manual/device/browser flow, expected result, relevant error/degraded behavior, required evidence, and whether it can merge independently. Derive commands from manifests, CI, repo guidance and `merge.validation_command`, but leave the full validation suite to Symphony's merge gate; do not invent tests or claim unperformed checks passed.
 - Unresolved product, architecture, data-loss, cost, or irreversible decisions. Keep implementation blocked when those decisions are required, or create an explicitly requested planning/spec task to investigate them.
 
 ## Labels and execution policy

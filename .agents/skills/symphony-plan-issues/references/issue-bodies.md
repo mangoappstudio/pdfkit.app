@@ -16,7 +16,7 @@ Scale the body to the work; omit empty sections. Preserve the repository's estab
 - [Relevant failure/error or degraded behavior.]
 
 ## Observable verification
-- Run/flow: [Actual repo command or browser/device/manual procedure.]
+- Run/flow: [The smallest real check that proves this change: a focused test target or a browser/device/manual procedure.]
 - Expected result: [What should visibly happen.]
 - Evidence: [Test output, screenshot, device trace, API response, etc.]
 - Merge independence: [Independent, or blocked by named issue/native dependency.]
@@ -24,6 +24,20 @@ Scale the body to the work; omit empty sections. Preserve the repository's estab
 ## Dependencies and decisions
 [Issue links, native dependency direction, and unresolved decisions if any.]
 ```
+
+Keep the verification focused. The worker runs the listed command while developing, and
+Symphony's `merge.validation_command` already runs the full path-based suites once on the
+final PR (for Android: `testDebugUnitTest`, plus `lintDebug assembleDebug` when Gradle,
+manifest or resource files changed). So:
+
+- Name the focused target, not the full suite: `./gradlew :feature:camera:testDebugUnitTest`
+  rather than `./gradlew testDebugUnitTest lintDebug assembleDebug`. A full Android
+  lint+assemble pass takes 30 minutes or more on the shared machine and has consumed entire
+  agent turns.
+- Ask for device screenshots or emulator flows only when the change is visual and cannot be
+  proven by a unit test; never ask the worker to start an emulator for evidence.
+- Do not restate the merge gate in the issue. One line such as "Symphony's merge checks cover
+  lint and the debug build" is enough.
 
 For a bug, add reproduction conditions, expected/actual behavior, and measured evidence. Avoid including tokens, private customer records, or raw sensitive logs. For a planning-only task, use `planning`/`task:spec`; ask for problem analysis, relevant architecture, alternatives/tradeoffs, proposed approach, verification plan, risks and implementation slices. Do not require code edits or a PR for planning completion.
 
